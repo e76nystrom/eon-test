@@ -28,7 +28,7 @@ version = "0.2.71_EON Jan 10, 2014 PRELIM"
 #released for editing as msapyP105 on 1/22/2014
 version = "0.2.72 Jan 22, 2014 PRELIM"
 version = "2.7.P3 (2/2/14)"
-version = "2.7.P106 (2/3/14)"
+#version = "2.7.P106 (2/3/14)"
 version = "2.7.P04 (2/4/14)"
 version = "2.7.P107 (2/7/14)"
 
