@@ -167,6 +167,7 @@ truncateS11ToUnity = False
 ##    winUsesParallelPort = True
 ##else:
 ##    winUsesParallelPort = False
+winUsesParallelPort = False
 
 # appdir is the directory containing this program
 appdir = os.path.abspath(os.path.dirname(sys.argv[0]))
@@ -7248,7 +7249,7 @@ class VScaleDialog(wx.Dialog):
         if i != vScale.typeIndex:
             # have chosen a new data type: perform auto-scale
             vScale.typeIndex = i
-            vScale.dataType = traceTypesLists[msa.mode][i]
+            vScale.dataType = dataType = traceTypesLists[msa.mode][i]
             vScale.top = self.top = dataType.top
             vScale.bot = self.bot = dataType.bot
             if self.top == 0 and self.bot == 0:
