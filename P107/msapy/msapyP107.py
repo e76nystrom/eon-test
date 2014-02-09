@@ -30,7 +30,7 @@ version = "0.2.72 Jan 22, 2014 PRELIM"
 version = "2.7.P3 (2/2/14)"
 #version = "2.7.P106 (2/3/14)"
 version = "2.7.P04 (2/4/14)"
-version = "2.7.P107 (2/7/14)"
+version = "2.7.P107 (2/9/14)"
 
 # NOTE by JGH Dec 8, 2013: An attempt has been made to convert the Python 2.7 code to Python 3.
 # The conversion has been completed and affected print statements (require parentheses),
@@ -977,16 +977,20 @@ class MSA_CB_USB(MSA_CB):
     def InStatus(self):
         if self.show:
             print ("InStatus start")
-        if len(self._readFIFO) < 1:
+        retry = 5
+        while len(self._readFIFO) < 1:
             r = self._read()
             if not isMac:
                 r = uarray.array('B', r)
             self._readFIFO += r
+            if --retry == 0:
+                break
         if len(self._readFIFO) < 1:
             print ("InStatus: no data")
             return 0
         # put {WAIT, ACK} in bits [7:6]
-        result = ((self._readFIFO[0] << 2) & 0xc0) ^ 0x80
+        # result = ((self._readFIFO[0] << 2) & 0xc0) ^ 0x80
+        result = self._readFIFO[0]
         self._readFIFO = self._readFIFO[1:]
         if self.show:
             print ("InStatus -> 0x%02x" % result)
@@ -1002,7 +1006,10 @@ class MSA_CB_USB(MSA_CB):
     def GetADCs(self, n):
         mag = phase = 0
         for i in range(n):
-            stat = self.InStatus()   # read data
+            stat = self.InStatus()   # read data 
+            if (i == 0) and ((stat & 0xf) != 0xf):
+                print "out of sync %x" % stat
+            stat = ((stat << 2) & 0xff) ^ 0x80
             mag =   (mag   << 1) | (stat & self.P5_MagData)
             phase = (phase << 1) | (stat & self.P5_PhaseData)
         if self.show:
@@ -2642,6 +2649,8 @@ class MSA:
         if f < -48:
             Sdb = nan
             Sdeg = nan
+            Mdb = nan
+            Mdeg = nan
         else:
             doPhase = self.mode > self.MODE_SATG
             invPhase = self.invPhase
@@ -2814,7 +2823,7 @@ class MSA:
                             Sdb -= calM
                             Sdeg -= calP
                             (Sdb, Sdeg) = cal.ConvertRawDataToReflection(step, Sdb, Sdeg)
-                    else:
+                    elif msa.mode == MSA.MODE_VNATran:
                     # End EON Jan 10 2014
                         if self.calNeedsInterp:
                             calM = interp(f, cal.Fmhz, cal.Sdb)
@@ -3269,6 +3278,7 @@ class VScale:
         self.typeIndex = typeIndex
         self.top = top
         self.bot = bot
+        self.maxHold = False
         self.primeTraceUnits = primeTraceUnits
         typeList = traceTypesLists[mode]
         self.dataType = typeList[min(typeIndex, len(typeList)-1)]
@@ -3277,7 +3287,7 @@ class VScale:
     # Perform auto-scale on limits to fit data.
 
     def AutoScale(self, frame):
-        specP = frame.specP
+#        specP = frame.specP
         dataType = self.dataType
         if dataType.units == "Deg":
             self.top = 180
@@ -3350,6 +3360,8 @@ class Trace:
         self.magTrace = None
         self.siFlags = 0
         self.isMain = True
+        self.maxHold = False
+        self.max = False
         try:
             self.LFmhz = log10(spec.Fmhz)
         except FloatingPointError:
@@ -3393,7 +3405,16 @@ class SATrace(Trace):
         self.Sdb = dcopy.copy(spec.Sdb)
 
     def SetStep(self, spec, i):
-        self.Sdb[i] = spec.Sdb[i]
+        if not self.maxHold:
+            self.Sdb[i] = spec.Sdb[i]
+        else:
+            if self.max:
+                if spec.Sdb[i] > self.Sdb[i]:
+                    self.Sdb[i] = spec.Sdb[i]
+                else:
+                    self.Sdb[i] = spec.Sdb[i]
+                    if i == spec.nSteps:
+                        self.max = True
 
 class MagdBmTrace(SATrace):
     desc = "Magnitude (dBm)"
@@ -3455,7 +3476,16 @@ class SATGTrace(Trace):
         self.Sdb = dcopy.copy(spec.Sdb)
 
     def SetStep(self, spec, i):
-        self.Sdb[i] = spec.Sdb[i]
+        if not self.maxHold:
+            self.Sdb[i] = spec.Sdb[i]
+        else:
+            if self.max:
+                if spec.Sdb[i] > self.Sdb[i]:
+                    self.Sdb[i] = spec.Sdb[i]
+                else:
+                    self.Sdb[i] = spec.Sdb[i]
+                    if i == spec.nSteps:
+                        self.max = True
 
 class TransdBTrace(SATGTrace):
     desc = "Transmission (dB)"
@@ -3517,7 +3547,16 @@ class S21Trace(Trace):
         self.S21 = 10**(spec.Sdb/20) + exp(1j*pi*spec.Sdeg/180)
 
     def SetStep(self, spec, i):
-        self.Sdb[i] = spec.Sdb[i]
+        if not self.maxHold:
+            self.Sdb[i] = spec.Sdb[i]
+        else:
+            if self.max:
+                if spec.Sdb[i] > self.Sdb[i]:
+                    self.Sdb[i] = spec.Sdb[i]
+                else:
+                    self.Sdb[i] = spec.Sdb[i]
+                    if i == spec.nSteps:
+                        self.max = True
         self.Sdeg[i] = spec.Sdeg[i]
         self.S21[i] = 10**(spec.Sdb[i]/20) + exp(1j*pi*spec.Sdeg[i]/180)
 
@@ -3668,6 +3707,7 @@ class S11Trace(Trace):
             self.Sdb = dcopy.copy(spec.Sdb)
         else:
             self.Sdb = spec.Sdb
+
         if truncateS11ToUnity:
             self.Sdb = min2(self.Sdb, 0)
 #         self.Sdeg = spec.Sdeg
@@ -3700,7 +3740,17 @@ class S11Trace(Trace):
         self.w = 2*pi*spec.f*MHz
 
     def SetStep(self, spec, i):
-        self.Sdb[i] = spec.Sdb[i]
+        if not self.maxHold:
+            self.Sdb[i] = spec.Sdb[i]
+        else:
+            if self.max:
+                if spec.Sdb[i] > self.Sdb[i]:
+                    self.Sdb[i] = spec.Sdb[i]
+                else:
+                    self.Sdb[i] = spec.Sdb[i]
+                    if i == spec.nSteps:
+                        self.max = True
+
         if truncateS11ToUnity:
             self.Sdb[i] = min2(self.Sdb[i], 0)
         self.Sdeg[i] = spec.Sdeg[i]
@@ -4022,7 +4072,7 @@ class VSWRTrace(S11Trace):
     desc = "VSWR"
     name = "VSWR"
     units = "Ratio"
-    top = 11
+    top = 10
     bot = 0
     def __init__(self, spec, iScale):
         S11Trace.__init__(self, spec, iScale)
@@ -4628,10 +4678,10 @@ class GraphPanel(wx.Panel):
             (w, h) = dc.GetTextExtent(modeName)
             dc.DrawText(modeName, clientWid - 10 - w, 5)
             dc.SetFont(wx.Font(fontSize, wx.SWISS, wx.NORMAL, wx.NORMAL))
-            calLevelName = ("None", "Base", "Band")[msa.calLevel]
-            if p.calLevel < 2 and p.mode >= msa.MODE_SATG:
+            if p.calLevel <= 2 and p.mode > msa.MODE_SATG:
+                calLevelName = ("None", "Base", "Band")[msa.calLevel]
                 dc.SetTextForeground(red)
-            dc.DrawText("Cal=" + calLevelName, xinfo, yinfo + 0*dyText)
+                dc.DrawText("Cal=" + calLevelName, xinfo, yinfo + 0*dyText)
             dc.SetTextForeground(hColor)
             ##dc.DrawText("RBW=%sHz" % si(p.rbw * kHz), xinfo, yinfo + 1*dyText)
             ##dc.DrawText("RBW=%sHz" % (p.rbw * kHz), xinfo, yinfo + 1*dyText)
@@ -6752,6 +6802,8 @@ class SweepDialog(wx.Dialog):
         samples = msa.videoFilterNames
         cm = wx.ComboBox(self, -1, samples[1], (0, 0), (120, -1), samples)
         cm.Enable(True) # JGH set True instead of false
+        cm.SetSelection(p.indexVideoSel)
+
         self.Bind(wx.EVT_COMBOBOX, self.AdjAutoWait, cm)
         self.videoFiltCM = cm
         sizerV1.Add(cm, 0, 0)
@@ -7353,7 +7405,7 @@ class VScaleDialog(wx.Dialog):
     def __init__(self, specP, vScale, pos):
         self.specP = specP
         self.vScale = vScale
-        self.prefs = p = specP.prefs
+#        self.prefs = p = specP.prefs
         units = vScale.dataType.units
         wx.Dialog.__init__(self, specP, -1, "Vert %s Scale" % units,
                             pos, wx.DefaultSize, wx.DEFAULT_DIALOG_STYLE)
@@ -7393,6 +7445,10 @@ class VScaleDialog(wx.Dialog):
         self.typeSelCB = cbox
         self.Bind(wx.EVT_COMBOBOX, self.OnSelectType, cbox)
         sizerGB.Add(cbox, (1, 4), flag=c)
+        self.MaxHoldChk = chk = wx.CheckBox(self, -1, "Max Hold")
+        chk.SetValue(vScale.maxHold)
+        chk.Bind(wx.EVT_CHECKBOX ,self.OnMaxHold)
+        sizerGB.Add(chk, (2, 4), flag=c)
         sizerGB.AddGrowableCol(3)
 
         # TODO: VScale primary trace entry
@@ -7449,6 +7505,11 @@ class VScaleDialog(wx.Dialog):
         self.botRefTC.SetValue(si(vScale.bot, flags=SI_ASCII))
         specP.frame.DrawTraces()
         specP.FullRefresh()
+
+    def OnMaxHold(self, event):
+#        specP = self.specP
+        vScale = self.vScale
+        vScale.maxHold = self.MaxHoldChk.GetValue()
 
     #--------------------------------------------------------------------------
     # A graph data type selected- if new, remember it and run auto scale.
@@ -14898,6 +14959,8 @@ class MSASpectrumFrame(wx.Frame):
         vaType = types[vaTypeIndex]
         if spec.vaType != vaType:
             trva = vaType(spec, 0)
+            trva.maxHold = vs0.maxHold
+            trva.max = False
             if incremental:
                 spec.vaType = vaType
                 spec.trva = trva
@@ -14911,6 +14974,8 @@ class MSASpectrumFrame(wx.Frame):
         vbType = types[vbTypeIndex]
         if spec.vbType != vbType:
             trvb = vbType(spec, 1)
+            trvb.maxHold = vs1.maxHold
+            trvb.max = False
             if incremental:
                 spec.vbType = vbType
                 spec.trvb = trvb
@@ -15765,6 +15830,9 @@ class MSASpectrumFrame(wx.Frame):
             p.switchTR = 0   # JGH 11/25/13
         if mode == msa.MODE_VNARefl:
             p.switchTR = 1   # JGH 11/25/13
+
+        if mode < msa.MODE_VNATran:
+            p.calLevel = msa.calLevel = 0
 
         menuBar = self.MenuBar
         i = menuBar.FindMenu("Functions")
