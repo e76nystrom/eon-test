@@ -183,21 +183,18 @@ void main(void)
                         IOB = P3_ADCONV;
                         IOD = P3strobe;
                         IOD = 0;
-			SYNCDELAY;
-			SYNCDELAY;
-			SYNCDELAY;
-			SYNCDELAY;
-			SYNCDELAY;
-			SYNCDELAY;
-			SYNCDELAY;
+			for (len = 15; len > 0; --len)
+			{
+			 NOP;
+			}
 			IOB = 0;
 			IOD = P3strobe;
 			IOD = 0;
-			SYNCDELAY;
-			SYNCDELAY;
-			SYNCDELAY;
-			SYNCDELAY;
-			SYNCDELAY;
+			for (len = 10; len > 0; --len)
+			{
+			 NOP;
+			}
+			byte = 0xf;
                         for (; arg1 > 0; arg1--)
                         {
                             IOB = P3_ADSERCLK;
@@ -207,10 +204,12 @@ void main(void)
 			    SYNCDELAY;
 			    SYNCDELAY;
 			    SYNCDELAY;
-                            *dest++ = IOA;
+			    byte |= IOA & 0x30;
+                            *dest++ = byte;
                             IOB = 0;
                             IOD = P3strobe;
                             IOD = 0;
+			    byte = arg1 & 0x7;
                         }
                         break;
 
