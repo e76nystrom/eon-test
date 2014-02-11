@@ -30,7 +30,7 @@ version = "0.2.72 Jan 22, 2014 PRELIM"
 version = "2.7.P3 (2/2/14)"
 #version = "2.7.P106 (2/3/14)"
 version = "2.7.P04 (2/4/14)"
-version = "2.7.P107 (2/9/14)"
+version = "2.7.P107 (2/10/14)"
 
 # NOTE by JGH Dec 8, 2013: An attempt has been made to convert the Python 2.7 code to Python 3.
 # The conversion has been completed and affected print statements (require parentheses),
@@ -787,6 +787,7 @@ class MSA_CB_USB(MSA_CB):
         self._readFIFO = uarray.array('B', []) # JGH numpy raises its ugly head
         self._firstRead = True
         self.usbFX2 = None
+        self.min = 20
         
     # Look for the FX2 device on USB and initialize it and self.usbFX2 if found
 
@@ -985,6 +986,9 @@ class MSA_CB_USB(MSA_CB):
             self._readFIFO += r
             if --retry == 0:
                 break
+        if retry < self.min:
+            self.min = retry
+            print "retry %d" % retry
         if len(self._readFIFO) < 1:
             print ("InStatus: no data")
             return 0
@@ -1005,10 +1009,16 @@ class MSA_CB_USB(MSA_CB):
     # Return the data previously read from the ADCs
     def GetADCs(self, n):
         mag = phase = 0
+#        tmp = 16
         for i in range(n):
             stat = self.InStatus()   # read data 
-            if (i == 0) and ((stat & 0xf) != 0xf):
-                print "out of sync %x" % stat
+            if i == 0:
+                if ((stat & 0xf) != 0xf):
+                    print "out of sync %x" % stat
+#            else:
+#                if (stat & 0xf) != (tmp & 0x7):
+#                    print "out of sync %2d %2d %02x" % (i, tmp, stat)
+#                tmp -= 1;
             stat = ((stat << 2) & 0xff) ^ 0x80
             mag =   (mag   << 1) | (stat & self.P5_MagData)
             phase = (phase << 1) | (stat & self.P5_PhaseData)
@@ -2682,6 +2692,7 @@ class MSA:
                 # JGH This shall be modified if autoPDM is used (Nov 9, 2013)
                 if doPhase and not bypassPDM and \
                         (self._phasedata < 13107 or self._phasedata > 52429):
+                    oldPhase = self._phasedata
                     self.invPhase = 1 - self.invPhase
                     self._CommandPhaseOnly()
                     self.LogEvent("CaptureOneStep phase delay")
@@ -2694,7 +2705,7 @@ class MSA:
                     self._ReadAD16Status()
                     # inverting the phase usually fails when signal is noise
                     if self._phasedata < 13107 or self._phasedata > 52429:
-                        print ("invPhase failed at", f, "ph=", self._phasedata)
+                        print ("invPhase failed at %8.6f orig %5d new %5d" % (f, oldPhase, self._phasedata))
                         self.invPhase = 1 - self.invPhase
 
             else:
@@ -2756,11 +2767,6 @@ class MSA:
             else:
                 Sdeg = nan
             Mdeg = Sdeg
-
-# Start EON Jan 10 2014
-#            if len(self.testDbDeg) == self._nSteps + 1:
-#                Sdb, Sdeg = self.testDbDeg[self._step]
-# End EON Jan 10 2014
 
             # determine which phase cycle this step is in by comparing
             # its phase quadrant to the previous one and adjusting the
@@ -3782,7 +3788,7 @@ class CapTrace(S11Trace):
     def __init__(self, spec, iScale):
         S11Trace.__init__(self, spec, iScale)
 
-    def Set(self, Z):
+    def SetV(self, Z):
         save = seterr(all="ignore")
         self.v = -1 / (Z.imag*self.w)
         seterr(**save)
@@ -3803,7 +3809,7 @@ class InductTrace(S11Trace):
     def __init__(self, spec, iScale):
         S11Trace.__init__(self, spec, iScale)
 
-    def Set(self, Z):
+    def SetV(self, Z):
         save = seterr(all="ignore")
         self.v = Z.imag/self.w
         seterr(**save)
@@ -3953,7 +3959,7 @@ class SerCapTrace(CapTrace):
     bot = 0
     def __init__(self, spec, iScale):
         CapTrace.__init__(self, spec, iScale)
-        self.Set(self.Zs)
+        self.SetV(self.Zs)
 
     def SetStep(self, spec, i):
         CapTrace.SetStep(self, spec, i)
@@ -3966,7 +3972,7 @@ class SerInductTrace(InductTrace):
     bot = 0
     def __init__(self, spec, iScale):
         InductTrace.__init__(self, spec, iScale)
-        self.Set(self.Zs)
+        self.SetV(self.Zs)
 
     def SetStep(self, spec, i):
         InductTrace.SetStep(self, spec, i)
@@ -4007,7 +4013,7 @@ class ParCapTrace(CapTrace):
     bot = 0
     def __init__(self, spec, iScale):
         CapTrace.__init__(self, spec, iScale)
-        self.Set(self.Zp)
+        self.SetV(self.Zp)
 
     def SetStep(self, spec, i):
         CapTrace.SetStep(self, spec, i)
@@ -4020,7 +4026,7 @@ class ParInductTrace(InductTrace):
     bot = 0
     def __init__(self, spec, iScale):
         InductTrace.__init__(self, spec, iScale)
-        self.Set(self.Zp)
+        self.SetV(self.Zp)
 
     def SetStep(self, spec, i):
         InductTrace.SetStep(self, spec, i)
@@ -6453,12 +6459,12 @@ class PDMCalDialog(wx.Dialog):
         msa.WrapStep()
         freq, adc, Sdb, phase0 = \
             msa.CaptureOneStep(post=False, useCal=False, bypassPDM=True)
-        print ("phase0= %9.3f" % phase0, "freq=", freq)
+        print ("phase0= %8.3f freq= %8.6f adc=%5d" % (phase0, freq, msa._phasedata))
         msa.invPhase = 1
         msa.WrapStep()
         freq, adc, Sdb, phase1 = \
             msa.CaptureOneStep(post=False, useCal=False, bypassPDM=True)
-        print ("phase1= %9.3f" % phase1, "freq=", freq)
+        print ("phase0= %8.3f freq= %8.6f adc=%5d" % (phase1, freq, msa._phasedata))
         msa.wait = p.wait
         self.invDeg = round(mod(phase1 - phase0, 360), 2)
         self.invBox.SetLabel("Current Inversion= %g deg" % self.invDeg)
@@ -7985,8 +7991,10 @@ class PerformReflCalDialog(wx.Dialog):
     def __init__(self, frame, calDialog):
         self.frame = frame
         self.readSpectrum = False
+        self.saveSpectrum = False
         self.calDialog = calDialog
         p = frame.prefs
+        self.prefs = p
         pos = p.get("perfReflCalWinPos", wx.DefaultPosition)
         wx.Dialog.__init__(self, frame, -1, "Reflection Calibration", pos,
                             wx.DefaultSize, wx.DEFAULT_DIALOG_STYLE)
@@ -8188,7 +8196,7 @@ class PerformReflCalDialog(wx.Dialog):
 
     def OslCal(self, spectrum):
         oslCal = self.oslCal
-        isLogF = self.frame.prefs.isLogF
+        isLogF = self.prefs.isLogF
         upd = False
         if oslCal == None:
             oslCal = OslCal(self.frame.specP.title, msa.indexRBWSel + 1, isLogF,
@@ -8206,7 +8214,7 @@ class PerformReflCalDialog(wx.Dialog):
 
     def CalScan(self):
         frame = self.frame
-        p = frame.prefs
+        p = self.prefs
         spectrum = frame.spectrum
         if spectrum:
             spectrum.isSeriesFix = p.isSeriesFix
@@ -8222,21 +8230,29 @@ class PerformReflCalDialog(wx.Dialog):
         return frame.spectrum
 
     def ReadSpectrum(self, fileName):
-        f = open(fileName, "r")
-        spectrum = self.frame.spectrum
-        testMagPhase = []
-        testDbDeg = []
+        frame = self.frame
+        p = self.prefs
+        frame.spectrum = spectrum = Spectrum.FromS1PFile(fileName + ".s1p")
+        specP = frame.specP
+        specP.h0 = p.fStart = spectrum.Fmhz[0]
+        specP.h1 = p.fStop  = spectrum.Fmhz[-1]
+        p.nSteps = spectrum.nSteps
+        frame.RefreshAllParms()
+        frame.DrawTraces()
+        f = open(fileName + ".txt", "r")
+        f.readline()
+        f.readline()
         for line in f:
-            (i, Fmhz, mag, phase, Mdb, Mdeg) = re.split(" *, *", line)
+            line = line.strip()
+            (i, Fmhz, Sdb, magdata, tmp, phasedata, Sdeg) = re.split(" +", line)
             i = int(i)
-            testMagPhase.append((int(mag), int(phase)))
-            testDbDeg.append((float(Mdb), float(Mdeg)))
-            spectrum.Fmhz[i] = float(Fmhz)
-            spectrum.Mdb[i] = float(Mdb)
-            spectrum.Mdeg[i] = float(Mdeg)
+            spectrum.magdata[i] = int(magdata)
+            spectrum.phasedata[i] = int(phasedata)
+#            spectrum.Fmhz[i] = float(Fmhz)
+#            spectrum.Mdb[i] = float(Mdb)
+#            spectrum.Mdeg[i] = float(Mdeg)
         f.close()
-        msa.testMagPhase = testMagPhase
-        msa.testDbDeg = testDbDeg
+        return spectrum
 
     def OnOpen(self, event):
         if msa.IsScanning():
@@ -8246,11 +8262,15 @@ class PerformReflCalDialog(wx.Dialog):
             self.openBtn.SetLabel("Abort Cal")
             self.openBtn.Enable(True)
             if self.readSpectrum:
-                self.ReadSpectrum('open.txt')
-            spectrum = self.CalScan()
+                spectrum = self.ReadSpectrum('open')
+            else:
+                spectrum = self.CalScan()
             oslCal = self.OslCal(spectrum)
+            if self.saveSpectrum:
+                spectrum.WriteInput("open.txt",self.prefs)
+                spectrum.WriteS1P("open.s1p",self.prefs)
             for i in range (0, spectrum.nSteps + 1):
-                oslCal.OSLcalOpen[i] = (spectrum.Mdb[i], spectrum.Mdeg[i])
+                oslCal.OSLcalOpen[i] = (spectrum.Sdb[i], spectrum.Sdeg[i])
             oslCal.OSLdoneO = True
             self.openBtn.SetLabel("Perform Open")
             self.EnableButtons(True)
@@ -8268,11 +8288,15 @@ class PerformReflCalDialog(wx.Dialog):
             self.shortBtn.Enable(True)
             msa.calibrating = True
             if self.readSpectrum:
-                self.ReadSpectrum('short.txt')
-            spectrum = self.CalScan()
+                spectrum = self.ReadSpectrum('short')
+            else:
+                spectrum = self.CalScan()
             oslCal = self.OslCal(spectrum)
+            if self.saveSpectrum:
+                spectrum.WriteInput("short.txt",self.prefs)
+                spectrum.WriteS1P("short.s1p",self.prefs)
             for i in range (0, spectrum.nSteps + 1):
-                oslCal.OSLcalShort[i] = (spectrum.Mdb[i], spectrum.Mdeg[i])
+                oslCal.OSLcalShort[i] = (spectrum.Sdb[i], spectrum.Sdeg[i])
             oslCal.OSLdoneS = True
             self.shortBtn.SetLabel("Perform Short")
             self.EnableButtons(True)
@@ -8289,11 +8313,15 @@ class PerformReflCalDialog(wx.Dialog):
             self.loadBtn.SetLabel("Abort Cal")
             self.loadBtn.Enable(True)
             if self.readSpectrum:
-                self.ReadSpectrum('load.txt')
-            spectrum = self.CalScan()
+                spectrum = self.ReadSpectrum('load')
+            else:
+                spectrum = self.CalScan()
             oslCal = self.OslCal(spectrum)
+            if self.saveSpectrum:
+                spectrum.WriteInput("load.txt",self.prefs)
+                spectrum.WriteS1P("load.s1p",self.prefs)
             for i in range (0, spectrum.nSteps + 1):
-                oslCal.OSLcalLoad[i] = (spectrum.Mdb[i], spectrum.Mdeg[i])
+                oslCal.OSLcalLoad[i] = (spectrum.Sdb[i], spectrum.Sdeg[i])
             oslCal.OSLdoneL = True
             self.loadBtn.SetLabel("Perform Load")
             self.EnableButtons(True)
@@ -8485,7 +8513,7 @@ class PerformReflCalDialog(wx.Dialog):
 
     def Update(self):
         frame = self.frame
-        p = frame.prefs
+        p = self.prefs
         p.isSeriesFix = self.isSeriesFix
         p.isShuntFix = self.isShuntFix
         p.isRefCal = self.isRefCal
@@ -8542,13 +8570,11 @@ class PerformReflCalDialog(wx.Dialog):
         self.sizerH.Fit(self)
 
     def onReflFixHelp(self, event):
-        p = self.frame.prefs
         dlg = ReflFixHelpDialog(self.frame)
         if dlg.ShowModal() == wx.ID_OK:
             p.ReflFixHelpWinPos = dlg.GetPosition().Get()
 
     def onReflCalHelp(self, event):
-        p = self.frame.prefs
         dlg = ReflCalHelpDialog(self.frame)
         if dlg.ShowModal() == wx.ID_OK:
             p.ReflCalHelpWinPos = dlg.GetPosition().Get()
@@ -13416,7 +13442,7 @@ class CrystAnalDialog(FunctionDialog):
         p = frame.prefs
         specP = frame.specP
         isLogF = p.isLogF
-        show = 0
+        show = True
         try:
             if not self.fullSweep:
                 self.Fp = floatOrEmpty(self.FpBox.GetValue())
@@ -13438,7 +13464,7 @@ class CrystAnalDialog(FunctionDialog):
             # initially put marker 1 at Fs
             magName = self.MagTraceName()
             trMag = specP.traces[magName]
-            markers = specP.markers
+            markers = specP.markers 
             markers["1"]  = m1 =  Marker("1", magName, Fs)
             m1.SetFromTrace(trMag, isLogF)
             jP = trMag.Index(m1.mhz, isLogF)
@@ -13452,14 +13478,30 @@ class CrystAnalDialog(FunctionDialog):
                 print ("targVal=", targVal, "jP=", jP, "[jP]=", vals[jP])
             # now move marker 1 to where phase zero to find exact Fs
             # search to right if phase above zero at peak
-            searchR = vals[jP] > targVal
-            signP = (-1, 1)[searchR]
-            m1.FindValue(trPh, jP, isLogF, signP, searchR, targVal, show)
-            if isnan(m1.mhz):
-                m1.FindValue(trPh, jP, isLogF, -signP, 1-searchR, targVal, show)
+            if False:
+                searchR = vals[jP] > targVal
+                signP = (-1, 1)[searchR]
+                m1.FindValue(trPh, jP, isLogF, signP, searchR, targVal, show)
+                if isnan(m1.mhz):
+                    m1.FindValue(trPh, jP, isLogF, -signP, 1-searchR, targVal, show)
+                if 1:   # set 0 to disable zero-phase Fs use to match Basic
+                    Fs = m1.mhz
+            else:
+                lastX = vals[jP]
+                lastI = 0
+                for i in range (jP, len(vals)):
+                    X = vals[i]
+                    if (lastX < 0 and X > 0) or (X < 0 and lastX > 0):
+                        break
+                    lastX = X
+                    lastI = i
+                Fmhz = trPh.Fmhz
+                print ("i %3d lastX %6.2f X %6.2f" % (i, lastX, X))
+                print ("lastX %8.6f X %8.6f" % (Fmhz[lastI], Fmhz[i]))
+                fDiff = Fmhz[i] - Fmhz[lastI]
+                Fs = (-lastX / (X - lastX)) * fDiff + Fmhz[lastI]
+                m1.mhz = Fs
 
-            if 1:   # set 0 to disable zero-phase Fs use to match Basic
-                Fs = m1.mhz
             specP.markersActive = True
             specP.FullRefresh()
             wx.Yield()
@@ -13841,8 +13883,8 @@ class SmithPanel(wx.Panel):
 
         gc = wx.GraphicsContext.Create(dc)
         gc.Translate(clientWid/2, clientHt/2)
-        foreFont = gc.CreateFont(normalFont, col=foreColor)
-        gridFont = gc.CreateFont(normalFont, col=gridColor)
+        foreFont = gc.CreateFont(normalFont, foreColor)
+        gridFont = gc.CreateFont(normalFont, gridColor)
 
         # pure resistance line across center
         gc.SetFont(gridFont)
@@ -15419,7 +15461,7 @@ class MSASpectrumFrame(wx.Frame):
         self.RefreshAllParms()
         self.DrawTraces()
 
-    def SaveData(self, event=None, data=None, writer=None, name="Data.txt"):
+    def SaveData(self, event=None, data=None, writer=None, name="Data.s1p"):
         self.StopScanAndWait()
         p = self.prefs
         if writer == None:
