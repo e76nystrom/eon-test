@@ -30,7 +30,7 @@ version = "0.2.72 Jan 22, 2014 PRELIM"
 version = "2.7.P3 (2/2/14)"
 #version = "2.7.P106 (2/3/14)"
 version = "2.7.P04 (2/4/14)"
-version = "2.7.P107 (2/10/14)"
+version = "2.7.P107 (2/11/14)"
 
 # NOTE by JGH Dec 8, 2013: An attempt has been made to convert the Python 2.7 code to Python 3.
 # The conversion has been completed and affected print statements (require parentheses),
@@ -7991,7 +7991,7 @@ class PerformReflCalDialog(wx.Dialog):
     def __init__(self, frame, calDialog):
         self.frame = frame
         self.readSpectrum = False
-        self.saveSpectrum = False
+        self.saveSpectrum = True
         self.calDialog = calDialog
         p = frame.prefs
         self.prefs = p
