@@ -22,6 +22,7 @@
 // the safe side.
 #define NOP     __asm nop __endasm
 #define SYNCDELAY   NOP; NOP; NOP; NOP
+#define DELAY(n) for (len = n; len > 0; --len) NOP
 
 // MSA "control" port bits
 #define P1strobe 0x01    // latches data into port P1
@@ -122,9 +123,11 @@ void main(void)
                             byte = *src++;
                             IOB = byte;
                             IOD = P1strobe;
+			    SYNCDELAY;
                             IOD = 0;
                             IOB = byte + arg1;
                             IOD = P1strobe;
+			    SYNCDELAY;
                             IOD = 0;
                         }
                         break;
@@ -182,35 +185,21 @@ void main(void)
                         outlen += arg1;
                         IOB = P3_ADCONV;
                         IOD = P3strobe;
-                        IOD = 0;
-			for (len = 15; len > 0; --len)
-			{
-			 NOP;
-			}
+			DELAY(15);
 			IOB = 0;
-			IOD = P3strobe;
-			IOD = 0;
-			for (len = 10; len > 0; --len)
-			{
-			 NOP;
-			}
+			DELAY(3);
 			byte = 0xf;
                         for (; arg1 > 0; arg1--)
                         {
                             IOB = P3_ADSERCLK;
-                            IOD = P3strobe;
-                            IOD = 0;
-			    SYNCDELAY;
-			    SYNCDELAY;
-			    SYNCDELAY;
-			    SYNCDELAY;
 			    byte |= IOA & 0x30;
                             *dest++ = byte;
-                            IOB = 0;
-                            IOD = P3strobe;
-                            IOD = 0;
 			    byte = arg1 & 0x7;
+			    IOB = 0;
+			    DELAY(5);
                         }
+			NOP;
+			IOD = 0;
                         break;
 
                     case 'V': // Version of code
