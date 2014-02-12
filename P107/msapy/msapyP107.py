@@ -30,7 +30,7 @@ version = "0.2.72 Jan 22, 2014 PRELIM"
 version = "2.7.P3 (2/2/14)"
 #version = "2.7.P106 (2/3/14)"
 version = "2.7.P04 (2/4/14)"
-version = "2.7.P107 (2/11/14)"
+version = "2.7.P107 (2/12/14)"
 
 # NOTE by JGH Dec 8, 2013: An attempt has been made to convert the Python 2.7 code to Python 3.
 # The conversion has been completed and affected print statements (require parentheses),
@@ -2705,7 +2705,8 @@ class MSA:
                     self._ReadAD16Status()
                     # inverting the phase usually fails when signal is noise
                     if self._phasedata < 13107 or self._phasedata > 52429:
-                        print ("invPhase failed at %8.6f orig %5d new %5d" % (f, oldPhase, self._phasedata))
+                        print ("invPhase failed at %13.6f mag %5d orig %5d new %5d" %
+                               (f, self._magdata, oldPhase, self._phasedata))
                         self.invPhase = 1 - self.invPhase
 
             else:
@@ -4686,7 +4687,7 @@ class GraphPanel(wx.Panel):
             dc.SetFont(wx.Font(fontSize, wx.SWISS, wx.NORMAL, wx.NORMAL))
             if p.calLevel <= 2 and p.mode > msa.MODE_SATG:
                 calLevelName = ("None", "Base", "Band")[msa.calLevel]
-                dc.SetTextForeground(red)
+                dc.SetTextForeground((red, blue, hColor)[p.calLevel])
                 dc.DrawText("Cal=" + calLevelName, xinfo, yinfo + 0*dyText)
             dc.SetTextForeground(hColor)
             ##dc.DrawText("RBW=%sHz" % si(p.rbw * kHz), xinfo, yinfo + 1*dyText)
@@ -7978,7 +7979,7 @@ class OperCalHelpDialog(wx.Dialog):
 class PerformReflCalDialog(wx.Dialog):
     def __init__(self, frame, calDialog):
         self.frame = frame
-        self.readSpectrum = True
+        self.readSpectrum = False
         self.saveSpectrum = False
         self.calDialog = calDialog
         p = frame.prefs
@@ -8085,36 +8086,44 @@ class PerformReflCalDialog(wx.Dialog):
         sizerV.Add(rb, 0, wx.ALL, 2)
         sizerV.AddSpacer(10)
 
+        c = wx.ALIGN_CENTER_VERTICAL
         sizerGb = wx.GridBagSizer(20, 10)
+        doneSize = (30,-1)
+        self.openDone = txt = wx.StaticText(self, -1, "", size=doneSize)
+        sizerGb.Add(txt, (0, 0), flag=c)
         self.openBtn = btn = wx.Button(self, -1, "Perform Open")
         self.btnList.append(btn)
         btn.Bind(wx.EVT_BUTTON, self.OnOpen)
-        sizerGb.Add(btn, (0, 0))
+        sizerGb.Add(btn, (0, 1))
         self.openSpecTxt = txt = wx.TextCtrl(self, -1, "")
         txt.SetEditable(True)
         txt.Enable()
         txt.SetBackgroundColour(wx.WHITE)
-        sizerGb.Add(txt, (0, 1))
+        sizerGb.Add(txt, (0, 2))
 
+        self.shortDone = txt = wx.StaticText(self, -1, "", size=doneSize)
+        sizerGb.Add(txt, (1, 0), flag=c)
         self.shortBtn = btn = wx.Button(self, -1, "Perform Short")
         self.btnList.append(btn)
         btn.Bind(wx.EVT_BUTTON, self.OnShort)
-        sizerGb.Add(btn, (1, 0))
+        sizerGb.Add(btn, (1, 1))
         self.shortSpecTxt = txt = wx.TextCtrl(self, -1, "")
         txt.SetEditable(False)
         txt.Disable()
         txt.SetBackgroundColour(wx.WHITE)
-        sizerGb.Add(txt, (1, 1))
+        sizerGb.Add(txt, (1, 2))
 
+        self.loadDone = txt = wx.StaticText(self, -1, "", size=doneSize)
+        sizerGb.Add(txt, (2, 0), flag=c)
         self.loadBtn = btn = wx.Button(self, -1, "Perform Load")
         self.btnList.append(btn)
         btn.Bind(wx.EVT_BUTTON, self.OnLoad)
-        sizerGb.Add(btn, (2, 0))
+        sizerGb.Add(btn, (2, 1))
         self.loadSpecTxt = txt = wx.TextCtrl(self, -1, "")
         txt.SetEditable(True)
         txt.Disable()
         txt.SetBackgroundColour(wx.WHITE)
-        sizerGb.Add(txt, (2, 1))
+        sizerGb.Add(txt, (2, 2))
         sizerV.Add(sizerGb, 0, wx.ALL, 2)
 
         st = wx.StaticText(self, -1, "Calibrations Standards")
@@ -8261,6 +8270,7 @@ class PerformReflCalDialog(wx.Dialog):
                 oslCal.OSLcalOpen[i] = (spectrum.Sdb[i], spectrum.Sdeg[i])
             oslCal.OSLdoneO = True
             self.openBtn.SetLabel("Perform Open")
+            self.openDone.SetLabel("Done");
             self.EnableButtons(True)
             if self.isRefCal:
                 self.onDone(event)
@@ -8287,6 +8297,7 @@ class PerformReflCalDialog(wx.Dialog):
                 oslCal.OSLcalShort[i] = (spectrum.Sdb[i], spectrum.Sdeg[i])
             oslCal.OSLdoneS = True
             self.shortBtn.SetLabel("Perform Short")
+            self.shortDone.SetLabel("Done");
             self.EnableButtons(True)
             if self.isRefCal:
                 self.onDone(event)
@@ -8312,6 +8323,7 @@ class PerformReflCalDialog(wx.Dialog):
                 oslCal.OSLcalLoad[i] = (spectrum.Sdb[i], spectrum.Sdeg[i])
             oslCal.OSLdoneL = True
             self.loadBtn.SetLabel("Perform Load")
+            self.loadDone.SetLabel("Done");
             self.EnableButtons(True)
             self.Update()
 
@@ -10592,6 +10604,7 @@ class OslCal:
         for val in args:
             m = re.match("([A-Z]+)(.*)",val)
             tag = m.group(1)
+            v = m.group(2)
             if tag == "S":
                 connect = "S"
                 R = 0
@@ -10602,8 +10615,8 @@ class OslCal:
                 R = constMaxValue
                 L = constMaxValue
                 C = 0
-            elif m.groups == 2:
-                v = floatSI(m.group(2))
+            elif v != "":
+                v = floatSI(v)
                 if tag == "R":
                     R = v
                 elif tag == "L":
