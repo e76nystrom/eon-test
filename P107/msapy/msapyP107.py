@@ -8956,7 +8956,7 @@ class OslCal:
     def __init__(self, when, pathNo, isLogF, fStart, fStop, nSteps, Fmhz):
         self.desc = "%s, Path %d, %d %s steps, %g to %g MHz." % \
             (when, pathNo, nSteps, ("linear", "log")[isLogF], fStart, fStop)
-        self.oslDbg = True
+        self.oslDbg = False
         self.when = when
         self.path = pathNo
         self.oslCal = True
