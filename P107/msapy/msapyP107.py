@@ -1545,14 +1545,14 @@ class Spectrum:
     def WriteInput(self, fileName, p):
         f = open(fileName, "w")
         f.write( \
-            " Step           Calc Mag  Mag A/D  Freq Cal Pha A/D Processed\n")
-        f.write(" Num  Freq (MHz)  Input   Bit Val   Factor  Bit Val    " \
-            "Phase\n")
+            " Step           Calc Mag  Mag A/D  Freq Cal Processed Pha A/D\n")
+        f.write( \
+            " Num  Freq (MHz)  Input   Bit Val   Factor    Phase   Bit Val\n")
 
-        for i in range(self.nSteps):
-            f.write("%4d %11.6f %8.3f %6d %9.3f %8d %8.2f\n" %\
+        for i in range(len(self.Fmhz)):
+            f.write("%4d %11.6f %8.3f %6d %9.3f %8.2f %8d\n" %\
                         (i, self.Fmhz[i], self.Sdb[i], self.magdata[i],
-                        0., self.phasedata[i], self.Sdeg[i]))
+                        0., self.Sdeg[i], self.phasedata[i]))
         f.close()
 
     #--------------------------------------------------------------------------
@@ -4790,7 +4790,7 @@ class GraphPanel(wx.Panel):
                 nv = min(self.cursorStep+1, fullLen)
             if nv < 2:
                 break
-            v = tr.v[:nv]
+            v = nan_to_num(tr.v[:nv])
             if isLogF:
                 Fmhz = tr.LFmhz[:nv]
             else:
@@ -4897,19 +4897,7 @@ class GraphPanel(wx.Panel):
                     dots = concatenate((xy-dotEdge, xy+dotEdge),
                                         axis=1).tolist()
                     dc.SetPen(wx.Pen(color, self.dotSize, wx.SOLID))
-                    # Following added by EN 12/23/2013
-                    # Skip printing dots if any values are NaN
-                    skip = False
-                    for item in dots:
-                        for val in item:
-                            if math.isnan(val):
-                                skip = True
-                                break
-                        if skip:
-                            break
-                    if not skip:
-                        # EN end of addition
-                        dc.DrawLineList(dots, None)
+                    dc.DrawLineList(dots, None)
                     
 
         # ------ MARKERS ------
@@ -7990,8 +7978,8 @@ class OperCalHelpDialog(wx.Dialog):
 class PerformReflCalDialog(wx.Dialog):
     def __init__(self, frame, calDialog):
         self.frame = frame
-        self.readSpectrum = False
-        self.saveSpectrum = True
+        self.readSpectrum = True
+        self.saveSpectrum = False
         self.calDialog = calDialog
         p = frame.prefs
         self.prefs = p
@@ -8244,7 +8232,7 @@ class PerformReflCalDialog(wx.Dialog):
         f.readline()
         for line in f:
             line = line.strip()
-            (i, Fmhz, Sdb, magdata, tmp, phasedata, Sdeg) = re.split(" +", line)
+            (i, Fmhz, Sdb, magdata, tmp, Sdeg, phasedata) = re.split(" +", line)
             i = int(i)
             spectrum.magdata[i] = int(magdata)
             spectrum.phasedata[i] = int(phasedata)
@@ -8956,6 +8944,7 @@ class OslCal:
     def __init__(self, when, pathNo, isLogF, fStart, fStop, nSteps, Fmhz):
         self.desc = "%s, Path %d, %d %s steps, %g to %g MHz." % \
             (when, pathNo, nSteps, ("linear", "log")[isLogF], fStart, fStop)
+        self.oslDbg = True
         self.when = when
         self.path = pathNo
         self.oslCal = True
@@ -8995,7 +8984,6 @@ class OslCal:
         self.bandA = []
         self.bandB = []
         self.bandC = []
-        self.oslDbg = False
 
     # OSLCal[i] returns the tuple (Sdb, Sdeg) for step i
 
@@ -10603,20 +10591,20 @@ class OslCal:
         args = re.split(", *",RLC)
         for val in args:
             m = re.match("([A-Z]+)(.*)",val)
-            if m.groups == 2:
-                tag = m.group(1)
+            tag = m.group(1)
+            if tag == "S":
+                connect = "S"
+                R = 0
+                L = 0
+                C = constMaxValue
+            elif tag == "P":
+                connect = "P"
+                R = constMaxValue
+                L = constMaxValue
+                C = 0
+            elif m.groups == 2:
                 v = floatSI(m.group(2))
-                if tag == "S":
-                    connect = "S"
-                    R = 0
-                    L = 0
-                    C = constMaxValue
-                elif tag == "P":
-                    connect = "P"
-                    R = constMaxValue
-                    L = constMaxValue
-                    C = 0
-                elif tag == "R":
+                if tag == "R":
                     R = v
                 elif tag == "L":
                     L = v
@@ -10794,9 +10782,7 @@ class OslCal:
 
         (isErr, connect, R, L, C, QL, QC, D, coaxSpecs) = self.uParseRLC(spec)
         if not isErr:
-            pass
-            if coaxSpecs != "":
-                (isErr, R0, VF, K1, K2, lenFeet) = Coax.CoaxParseSpecs(coaxSpecs) # EON Jan 29, 2014
+            (isErr, R0, VF, K1, K2, lenFeet) = Coax.CoaxParseSpecs(coaxSpecs) # EON Jan 29, 2014
 
 #     twoPi=2*uPi()
 # Note R0 is the impedance of any transmission line in the RLC combo; Z0 is the reference impedance for
@@ -10826,7 +10812,7 @@ class OslCal:
 
         if self.oslDbg:
             f = open("ComboResponse1.txt","a")
-            f.write("%s, %f, %s, %s, R0 - %f, %f, %f, %f, %f %f\n" % 
+            f.write("%s, %f, %s, %s, R0 - %f, R - %f, L - %f, C - %f, %f %f\n" % 
                     (spec, Z0, jig, connect, R0, R, L, C, QL, QC))
         for i in range (0, self._nSteps):
             freq = self.Fmhz[i] * 1e6
@@ -13442,7 +13428,7 @@ class CrystAnalDialog(FunctionDialog):
         p = frame.prefs
         specP = frame.specP
         isLogF = p.isLogF
-        show = True
+        show = False
         try:
             if not self.fullSweep:
                 self.Fp = floatOrEmpty(self.FpBox.GetValue())
@@ -13496,8 +13482,8 @@ class CrystAnalDialog(FunctionDialog):
                     lastX = X
                     lastI = i
                 Fmhz = trPh.Fmhz
-                print ("i %3d lastX %6.2f X %6.2f" % (i, lastX, X))
-                print ("lastX %8.6f X %8.6f" % (Fmhz[lastI], Fmhz[i]))
+#                print ("i %3d lastX %6.2f X %6.2f" % (i, lastX, X))
+#                print ("lastX %8.6f X %8.6f" % (Fmhz[lastI], Fmhz[i]))
                 fDiff = Fmhz[i] - Fmhz[lastI]
                 Fs = (-lastX / (X - lastX)) * fDiff + Fmhz[lastI]
                 m1.mhz = Fs
@@ -13505,6 +13491,8 @@ class CrystAnalDialog(FunctionDialog):
             specP.markersActive = True
             specP.FullRefresh()
             wx.Yield()
+
+            self.R0 = float(self.R0Box.GetValue())
 
             # compute crystal parameters from measurements
             Rm, Cm, Lm, Cp, Qu, QL = \
@@ -13977,7 +13965,7 @@ class SmithPanel(wx.Panel):
             ##print ("j=", jMin, jMax, "f0=", f0, "trf0=", trf0, "trdf=", trdf
 
             # S11.real,S11.imag: coords of points to plot
-            S11 = tr.S11[jMin:jMax+1]
+            S11 = nan_to_num(tr.S11[jMin:jMax+1])
             # x,y: window coords of those points
             x =  S11.real * smRad
             y = -S11.imag * smRad
