@@ -29,8 +29,9 @@ version = "0.2.71_EON Jan 10, 2014 PRELIM"
 version = "0.2.72 Jan 22, 2014 PRELIM"
 version = "2.7.P3 (2/2/14)"
 version = "2.7.P106 (2/3/14)"
-version = "P109 (2/25/14)"
-
+version = "P108JGH_F (2/24/14)"
+version = "P109GEORGE (2/25/14)"
+version = "G109d (3/4/14)"
 # NOTE by JGH Dec 8, 2013: An attempt has been made to convert the Python 2.7 code to Python 3.
 # The conversion has been completed and affected print statements (require parentheses),
 # lambda functions (require being enclosed in parentheses) and unicode encoding using chr().
@@ -59,20 +60,20 @@ version = "P109 (2/25/14)"
 #   An "extrapolate ends" of cal table.
 #   A "save" button in cal.
 
+print (__name__)
+
 import sys
 print ("Python:", sys.version) # Requires python v2.7
+print("sys.platform: ", sys.platform)
 
 isWin   = (sys.platform == "win32")
-isLinux = (sys.platform == "linux2")
-isRpi = (sys.platform == "raspbian") # JGH to be worked out later
-isBBB = (sys.platform == "beaglebone") # JGH to be worked out later
-isMac = not (isWin or isLinux or isRpi or isBBB) # EON Jan 29, 2014
-
-print ("PLATFORM: ", sys.platform)
+winUsesParallelPort = False # DO NOT TOUCH THIS LINE
+isLinux=(sys.platform == "linux2")
+isMac=(sys.platform=="darwin" or not (isWin or isLinux))
 
 import msaGlobal
-import cmath, os, random, re, string
-import subprocess, time, thread, threading, traceback,  warnings
+import os, re, string, subprocess
+import time, thread, threading, traceback,  warnings
 import array as uarray
 import copy as dcopy
 import numpy.version
@@ -86,8 +87,7 @@ from numpy import clip, concatenate, convolve, diff, floor, exp
 from numpy import Inf, interp, isfinite, isnan, linspace, logspace, log10
 from numpy import mean, mod, nan, nan_to_num, pi, poly1d, polyfit
 from numpy import RankWarning, select, seterr, std
-from numpy import zeros, zeros_like
-from numpy.fft import fft
+from numpy import zeros
 from Queue import Queue
 from StringIO import StringIO
 
@@ -100,84 +100,22 @@ usbSync = True
 usbReadCount = 0
 usbSyncCount = 20
 incremental = True
-memLeak = False
 logEvents = False
 prt = False
 
-if memLeak:
-    from collections import defaultdict
-    import gc
-    from gc import get_objects
-    #import objgraph   # JGH requires python-objgraph module
-    objdump = 5
-    fill_before = True
-    before = defaultdict(int)
-    fil = open("dbg.txt","w")
-    fil.close()
-
-    def memInit():
-        global objdump, fill_before
-        if fill_before:
-            fill_before = False
-            gc.collect()
-            objects = get_objects()
-            for obj in objects:
-                before[id(obj)] = 1
-                objects = None
-
-    def memCheck():
-        global objdump, fill_before
-        gc.collect()
-        objects = get_objects()
-        fil = open("dbg.txt","a")
-        i = 0
-        for obj in objects:
-            if before[id(obj)] == 0:
-                objtype = type(obj).__name__
-                if  objtype != 'frame':
-                    if objtype == 'instancemethod':
-                        fil.write("i - %3d %8x %s\n" % (i, id(obj), obj.__name__))
-                        #if objdump > 0:
-                        #    objdump -= 1
-                        #    objgraph.show_backrefs(obj, filename="obj%d.png" % (objdump))
-                    elif objtype == 'instance':
-                        if obj.__class__ != '__main__.Event':
-                            fil.write("t - instance %s\n" % (obj.__class__))
-                    elif objtype == 'tuple':
-                        fil.write("t - tuple %3d %s\n" % (len(obj), obj))
-                    elif objtype == 'dict':
-                        fil.write("t - dict %3d\n" % (len(obj)))
-                        if False:
-                            for val in obj.keys():
-                                fil.write("%s %s\n" % (val, obj[val]))
-                                break
-                    else:
-                        fil.write("t - %s %8x\n" % (objtype, id(obj)))
-                    i += 1
-        fil.write("total %4d\n\n" % (i))
-        fil.close()
-# End EON Jan 22, 2014
-
 RequiredFx2CodeVersion = "0.1"
 CalVersion = "1.03" # compatible version of calibration files
+showProfile = 0     # set to 1 to generate msa.profile. Then run showprof.py.
+showThreadProfile = 0  # set to 1 to generate msa.profile for both threads
 
 # debugging and profiling settings
 
 debug = False        # set True to write debugging messages to msapy.log
-showProfile = 0     # set to 1 to generate msa.profile. Then run showprof.py.
-showThreadProfile = 0  # set to 1 to generate msa.profile for both threads
 #print(sys.argv[1:])
 if "-h" in sys.argv[1:]:
     print ("")
     print ("COMMAND LINE ARGUMENTS:")
-##    print ("The following are mutually exclusive:")
-##    print ("-bbb for unix using BeagleBoneBlack")
-##    print ("-rpi for unix using RaspberryPi")
-##    print ("-wpp for windows using parallel port")
-##    print ("-wu for windows using USB")
-##    print ("")
-##    print (" No arguments: unix with USB")
-##    print ("")
+
     print (" The following work with all systems:")
     print ("-h for this help")
     print ("-dbg for debug mode")
@@ -198,14 +136,14 @@ else:
     showProfile = 0
     showThreadProfile = 0  # set to 1 to generate msa.profile for both threads
 
-
 # Graph update interval, in milliseconds. The tradoff is between smooth
 # "cursor" movement and drawing overhead.
 msPerUpdate = 100
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
-goodPhaseMagThreshold = 0x2000
+# goodPhaseMagThreshold = 0x2000
+goodPhaseMagThreshold = 0x0000 # Scotty will determine usefulness of this 3/2/14
 
 # Set to truncate S11 to the unity circle to ignore error due to S21
 # measurement losses during calibrating
@@ -213,14 +151,6 @@ truncateS11ToUnity = False
 
 # set numpy divide-by-zero errors to be fatal
 ##seterr(all="raise")
-
-# Set to use parallel port I/O instead of USB on Windows
-##if "-wpp" in sys.argv[1:]:
-##    print ("MODE IS Windows using Parallel Port")
-##    winUsesParallelPort = True
-##else:
-##    winUsesParallelPort = False
-winUsesParallelPort = False
 
 # appdir is the directory containing this program
 appdir = os.path.abspath(os.path.dirname(sys.argv[0]))
@@ -243,10 +173,6 @@ print ("PROGRAM STARTED")
 # globals for OSL calibration calculations
 
 calWait = 50 # sweep wait during calibration # EON Jan 29, 2014
-
-RadsPerDegree = pi / 180
-DegreesPerRad = 180 / pi
-constMaxValue = 1e12
 
 def message(message, caption="", style=wx.OK): # EON Jan 29, 2014
     dlg = wx.MessageDialog(msa.frame, message, caption, style)
@@ -416,39 +342,6 @@ def divSafe(a, b):
     if b != 0:
         return a / b;
     return a
-
-# Start EON Jan 10 2014
-# Return base 10 log of aVal; special rule for small and non-positive arguments
-
-def uSafeLog10(aVal):
-    if aVal <= 1e-20:           #0.00001^4
-        return -20
-    else:
-        return log10(aVal)
-
-# Put deg in range -180 < deg <= 180
-
-def uNormalizeDegrees(deg):
-    while deg <= -180:
-        deg += 360
-    while deg > 180:
-        deg -= 360
-    return deg
-
-def polarDbDeg(Z):
-    (mag, phase) = cmath.polar(Z)
-    db = 20 * uSafeLog10(mag)
-    deg = phase * DegreesPerRad
-    return db, deg
-
-def cpx(Z):
-    val = "(%10.3e,%10.3e)" % (Z.real, Z.imag)
-    return val
-
-def pol(X):
-    val = "(m %10.3e,p %10.3e)" % (X[0], X[1])
-    return val
-# End EON Jan 10 2014
 
 #------------------------------------------------------------------------------
 # Transform S21 data to equivalent S11.
@@ -739,11 +632,10 @@ class MSA_CB:
             print ("Clear")
         pass
 
-
 #==============================================================================
 # Parallel port I/O interface.
 
-if isWin and winUsesParallelPort:
+if isWin and winUsesParallelPort: # THIS LINE IS ALWAYS FALSE AND THAT'S OK
     # Windows DLL for accessing parallel port
     from ctypes import windll
     try:
@@ -813,18 +705,16 @@ class MSA_CB_PC(MSA_CB):
             self.SetP(3, 0)          # SCLK=0, next bit is valid
         return (mag, phase)
 
-
 #==============================================================================
 # USBPAR interface module connected to MSA CB parallel port.
 #
 # 'control' port is FX2 port D
-#       DB25 pins {1, 14, 16, 17} = FX2 port D [3:0] = {STRB, AUTO, INIT, SELT}
-#        (to match Dave Roberts' hardware) This port includes the latched switches
+#   DB25 pins {1, 14, 16, 17} = FX2 port D [3:0] = {STRB, AUTO, INIT, SELT}
+#   (to match Dave Roberts' hardware) This port includes the latched switches
 # 'port' port is FX2 port B
-#       DB25 pins {9:2} = FX2 port B [7:0]
+#   DB25 pins {9:2} = FX2 port B [7:0]
 # 'status' port is FX2 port A
-#       DB25 pins {11, 10} = FX2 port A [5:4] = {WAIT, ACK}
-
+#   DB25 pins {11, 10} = FX2 port A [5:4] = {WAIT, ACK}
 
 class MSA_CB_USB(MSA_CB):
     # constants
@@ -850,63 +740,61 @@ class MSA_CB_USB(MSA_CB):
                 for dev in bus.devices:
                     if dev.idVendor == self.USB_IDVENDOR_CYPRESS and dev.idProduct == self.USB_IDPRODUCT_FX2:
                         odev = dev.open()
-##                        if 1:
-                        # run prog to download code into the FX2
-                        try:
-                            cycfx2progName = os.path.join(resdir, "cycfx2prog")
-                            usbparName = os.path.join(resdir, "usbpar.ihx")
-                            cmd = [cycfx2progName, "prg:%s" % usbparName, "run"]
-                            if debug:
-                                print (" ".join(cmd))
+                        if 1:
+                        # Run prog to download code into the FX2
+                        # Disable if the code is permanently loaded into the EPROM
+                            try:
+                                cycfx2progName = os.path.join(resdir, "cycfx2prog")
+                                usbparName = os.path.join(resdir, "usbpar.ihx")
+                                cmd = [cycfx2progName, "prg:%s" % usbparName, "run"]
+                                if debug:
+                                    print (" ".join(cmd))
 
-                            p = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT,
-                                        env=os.environ)
+                                p = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT,
+                                            env=os.environ)
 
-                            result = p.wait()  # JGH ??????????????
+                                result = p.wait()  # JGH ??????????????
 
-                            for line in p.stdout.readlines():
-                                print ("cycfx2prog:", line)
-                        except OSError:
-                            print ("Error: cycfx2prog:", sys.exc_info()[1].strerror)
-                            return
-                        if result != 0:
-                            print ("cycfx2prog returned", result)
-                            return
-                        print ("CYPRESS DEVICE FOUND")
-##                        if debug: # JGH 1/25/14
-##                            self.ReadUSBdevices() # JGH Non iterable error
+                                for line in p.stdout.readlines():
+                                    print ("cycfx2prog:", line)
+                            except OSError:
+                                print ("Error: cycfx2prog:", sys.exc_info()[1].strerror)
+                                return
+                            if result != 0:
+                                print ("cycfx2prog returned", result)
+                                return
+                            print ("CYPRESS DEVICE FOUND")
+                            try:
+                                odev = dev.open()
 
-                        try:
-                            odev = dev.open()
+                                # --------------------------------------------------
 
-                            # --------------------------------------------------
+    ##                            # If the program doesn't start, let it detach the
+    ##                            # Kernel driver ONCE, and then comment out the line
+    ##                            odev.detachKernelDriver(0)
+    ##                            if debug:
+    ##                               print ("Kernel Driver detached")
+    ##                            odev.setConfiguration(1) # JGH 10/31/13
+    ##                            if debug:
+    ##                                print ("Configuration has been set")
+    ##                            odev.releaseInterface() # JGH 10/14/13
+    ##                            if debug:
+    ##                                print ("Interface released")
 
-##                            # If the program doesn't start, let it detach the
-##                            # Kernel driver ONCE, and then comment out the line
-##                            odev.detachKernelDriver(0)
-##                            if debug:
-##                               print ("Kernel Driver detached")
-##                            odev.setConfiguration(1) # JGH 10/31/13
-##                            if debug:
-##                                print ("Configuration has been set")
-##                            odev.releaseInterface() # JGH 10/14/13
-##                            if debug:
-##                                print ("Interface released")
+                                # --------------------------------------------------
 
-                            # --------------------------------------------------
-
-                            odev.claimInterface(0)
-                            # Alt Interface 1 is the Bulk intf: claim device
-                            odev.setAltInterface(1)
-                            self.usbFX2 = odev
-                            print ("")
-                            print ("      **** FINISHED WITHOUT ERRORS ****")
-                            print ("")
-                        except usb.USBError:
-                            print ("USBError Exception")
-                            return
+                                odev.claimInterface(0)
+                                # Alt Interface 1 is the Bulk intf: claim device
+                                odev.setAltInterface(1)
+                                self.usbFX2 = odev
+                                print ("")
+                                print ("      **** FINISHED WITHOUT ERRORS ****")
+                                print ("")
+                            except usb.USBError:
+                                print ("USBError Exception")
+                                return
 
     # For debug only # JGH 1/25/14
     def ReadUSBdevices(self):
@@ -1118,11 +1006,25 @@ class MSA_CB_USB(MSA_CB):
         self._writeFIFO = ""
         self._readFIFO =  uarray.array('B', [])
 
-class MSA_BBB:
-    pass
+cb = None               # the current MSA Control Board, if present.
+hardwarePresent = True  # True when cb represents actual hardware.
+#==============================================================================
+class MSA_RPI(MSA_CB):
+    # constants
+    
+    def __init__(self):
+        self.show = debug
+        text = "This interface has not been implemented yet"
+        message(text, caption="RPI Error", style=wx.OK)
 
-class MSA_RPI:
-    pass
+#==============================================================================
+class MSA_BBB(MSA_CB):
+    # constants
+    
+    def __init__(self):
+        self.show = debug
+        text = "This interface has not been implemented yet"
+        message(text, caption="BBB Error", style=wx.OK)
 
 #==============================================================================
 # An MSA Local Oscillator DDS and PLL.
@@ -1130,9 +1032,9 @@ class MSA_RPI:
 class MSA_LO:
     # def __init__(self, id, freq, pllBit, le, fqud, PLLphasefreq, phasepolarity, appxdds, ddsfilbw):
     # JGH Above line substituted by the following
-    def __init__(self, id, freq, pllBit, le, fqud, PLLphasefreq, phasepolarity, \
+    def __init__(self, loid, freq, pllBit, le, fqud, PLLphasefreq, phasepolarity, \
                  appxdds, ddsfilbw, PLLtype): # JGH 2/7/14 Fractional mode not used
-        self.id = id                        # LO number, 1-3
+        self.id = loid                        # LO number, 1-3
         self.freq = freq                    # LO frequency
         self.CBP1_PLLDataBit = pllBit       # port 1 bit number for PLL data
         self.CBP2_LE = le                   # port 2 mask for Latch Enable line
@@ -1345,6 +1247,9 @@ class MSA_LO:
         # approximates the Ncounter for PLL
         ncount = divSafe(appxVCO, divSafe(reference, self.rcounter))
         self.ncounter = int(round(ncount))
+        if debug:
+            print(">>>1345<<< appxVCO, reference, ncounter: ", \
+                  appxVCO, reference, self.ncounter)
         self.fcounter = 0
         # actual phase freq of PLL
         #self.pdf = divSafe(appxVCO, self.ncounter) # JGH 2/2/14 Beware of globals!
@@ -1364,9 +1269,12 @@ class MSA_LO:
         Bcounter = int(self.ncounter/self.preselector)
         Acounter = int(self.ncounter-(Bcounter*self.preselector))
 
+        if debug:
+            print(">>>1364<<< PLLN: ", PLLN)
+            print("ncounter: ", self.ncounter)
+            print ("LO%d: Acounter=" % self.id, Acounter, "Bcounter=", Bcounter)
+
         if PLLN == "2325":
-            if debug:
-                print ("LO%d: Acounter=" % self.id, Acounter, "Bcounter=", Bcounter)
             if Bcounter < 3:
                 raise RuntimeError(PLLN + "Bcounter <3")
             if Bcounter > 2047:
@@ -1376,8 +1284,6 @@ class MSA_LO:
             Nreg = (Bcounter << 8) + (Acounter << 1)
 
         if (PLLN == "2326" or PLLN == "4118"):
-            if debug:
-                print ("LO%d: Acounter=" % self.id, Acounter, "Bcounter=", Bcounter)
             if Bcounter < 3:
                 raise RuntimeError(PLLN + "Bcounter <3")  # JGH Error < 3 common to all
             if Bcounter > 8191:
@@ -1388,8 +1294,6 @@ class MSA_LO:
             Nreg = 1 + (1 << 20) + (Bcounter << 7) + (Acounter << 2)
 
         if PLLN == "2350":
-            if debug:
-                print ("LO%d: Acounter=" % self.id, Acounter, "Bcounter=", Bcounter)
             if Bcounter < 3:
                 raise RuntimeError(PLLN + "Bcounter <3")  # JGH Error < 3 common to all
             if Bcounter > 1023:
@@ -1400,8 +1304,6 @@ class MSA_LO:
             Nreg = 3 + (Bcounter << 11) + (Acounter << 6) + (fcounter << 2)
 
         if PLLN == "2353":
-            if debug:
-                print ("LO%d: Acounter=" % self.id, Acounter, "Bcounter=", Bcounter)
             if Bcounter < 3:
                 raise RuntimeError(PLLN + "Bcounter <3")  # JGH Error < 3 common to all
             if Bcounter > 1023:
@@ -1412,8 +1314,6 @@ class MSA_LO:
             Nreg = (3 + (Bcounter << 11) + (Acounter << 6) + (fcounter << 2))
 
         if (PLLN == "4112" or PLLN == "4113"):
-            if debug:
-                print ("LO%d: Acounter=" % self.id, Acounter, "Bcounter=", Bcounter)
             if Bcounter < 3:
                 raise RuntimeError(PLLN + "Bcounter <3")  # JGH Error < 3 common to all
             if Bcounter > 8191:
@@ -1534,8 +1434,9 @@ class MSA_LO:
 
         #CreateBaseForDDSarray --
 
-        # The formula for the frequency output of the DDS(AD9850, 9851, or
-        # any 32 bit DDS) is: ddsoutput = base*msa.masterclock/2^32
+        # The formula for the frequency output of the DDS
+        # (AD9850, 9851, or any 32 bit DDS) is taken from:
+        # ddsoutput = base*msa.masterclock/2^32
         # rounded off to the nearest whole bit
         base = int(round(divSafe(self.ddsoutput * (1<<32), msa.masterclock))) # JGH 2/2/14
         self.DDSbits = base
@@ -1556,7 +1457,7 @@ class Spectrum:
         self.nSteps = nSteps        # number of steps in scan
         self.Fmhz = Fmhz            # array of frequencies (MHz), one per step
         n = nSteps + 1
-        self.oslCal = False	    # EON Jan 10 2014
+        self.oslCal = False        # EON Jan 10 2014
         self.Sdb = zeros(n)         # array of corresponding magnitudes (dB)
         self.Sdeg = zeros(n)        # phases (degrees)
         self.Scdeg = zeros(n)       # continuous phases (degrees)
@@ -1701,386 +1602,8 @@ class Spectrum:
         this.Scdeg = this.Sdeg
         return this
 
-
-#==============================================================================
-# Synthetic DUT (Device Under Test) parameters Dialog, used when no MSA
-# hardware is present.
-
-class SynDUTDialog(wx.Dialog):
-    def __init__(self, frame):
-        self.frame = frame
-        self.prefs = p = frame.prefs
-        framePos = frame.GetPosition()
-        frameSize = frame.GetSize()
-        self.pos = p.get("syndutWinPos", (framePos.x + frameSize.x + 204,
-                                framePos.y))
-        wx.Dialog.__init__(self, frame, -1, "Synthetic DUT", self.pos,
-                            wx.DefaultSize, wx.DEFAULT_DIALOG_STYLE)
-        sizerV = wx.BoxSizer(wx.VERTICAL)
-        c = wx.ALIGN_CENTER
-        chb = wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_BOTTOM
-
-        # DUT waveform generator or circuit type choices
-        choices = ["Tones", "Square", "RLC", "Crystal", "Cheb Filter",
-                    "Through", "Shunt Open", "Shunt Short", "Shunt Load"]
-        dutType = p.get("syndutType", "Tones")
-        self.sigTypeCB = cbox = wx.ComboBox(self, -1, dutType, (0, 0), (120, -1),
-                                            choices)
-        self.Bind(wx.EVT_COMBOBOX, self.OnType, cbox)
-        sizerV.Add(cbox, 0, c|wx.ALL, 10)
-
-        # parameters: a 2D array of (name, label, value, used) tuples
-        parms = [[("Fs",        "Fs (MHz)",     "100",      (0,1,4)),
-                  ("magdb",     "Mag (dB)",     "-20",      (0,1)),
-                  ("downdb",    "Down By (dB)", "-2.5",     (0,1,4)),
-                  ("BW",        "BW (kHz)",     "10",       (4,))],
-                 [("noisedbm",  "noise (dBm)",  "-90",      (0,1,2,3,4,5)),
-                  ("R0",        "R0 ("+Ohms+")", "50",      (2,3)),
-                  ("windowing", "Windowing",    "1",        (0,1)),
-                  ("ripple",    "Ripple (dB)",  "1",        (4,))],
-                 [("Rm",        "Rm ("+Ohms+")","10.25",    (3,)),
-                  ("Lm",        "Lm (mH)",      "13.05624", (3,)),
-                  ("Cm",        "Cm (fF)",      "16.823144",(3,)),
-                  ("Cp",        "Cp (pF)",      "3.89",     (3,))],
-                 [("Rs",        "Rs ("+Ohms+")","0",        (2,)),
-                  ("Ls",        "Ls (H)",       "0",        (2,)),
-                  ("Cs",        "Cs (F)",       "1",        (2,)),
-                  ("isSerLs",   "LsCs in Series", "1",      (2,))],
-                 [("Rsh",       "Rsh ("+Ohms+")", "1e99",   (2,)),
-                  ("Lsh",       "Lsh (H)",      "0",        (2,)),
-                  ("Csh",       "Csh (F)",      "1",        (2,)),
-                  ("isSerLsh",  "LshCsh in Ser", "1",       (2,))],
-                ]
-        self.parms = parms
-
-        # entry boxes for the parameters
-        # TODO: set each box's visibility based on where used
-        self.parmBoxes = {}
-        sizerG2 = wx.GridBagSizer(0, 10)
-        for i in range(len(parms)):
-            for j in range(len(parms[0])):
-                name, label, value, used = parms[i][j]
-                st = wx.StaticText(self, -1, label)
-                sizerG2.Add(st, (2*i, j), flag=chb)
-                value = p.get("syndut_" + name, float(value))
-                tc = wx.TextCtrl(self, -1, si(value, flags=SI_ASCII), \
-                                 size=(80, -1), style=wx.TE_PROCESS_ENTER)
-                self.Bind(wx.EVT_TEXT_ENTER, self.GenSynthInput, tc)
-                tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
-                tc.Bind(wx.EVT_KILL_FOCUS, self.GenSynthInput)
-                self.parmBoxes[name] = tc
-                sizerG2.Add(tc, (2*i+1, j), flag=c|wx.BOTTOM, border=5)
-        sizerV.Add(sizerG2, 0, c|wx.LEFT|wx.RIGHT|wx.TOP, 10)
-
-        # option checkboxes
-        sizerH2 = wx.BoxSizer(wx.HORIZONTAL)
-        self.noiseEn = chk = wx.CheckBox(self, -1, "Noise")
-        chk.SetValue(p.get("syndutNoiseEn", False))
-        chk.Bind(wx.EVT_CHECKBOX, self.GenSynthInput)
-        sizerH2.Add(chk, 0, c|wx.ALL, 10)
-        self.serRLCEn = chk = wx.CheckBox(self, -1, "RLC-Serial")
-        chk.SetValue(p.get("syndutSerRLCEn", False))
-        chk.Bind(wx.EVT_CHECKBOX, self.GenSynthInput)
-        sizerH2.Add(chk, 0, c|wx.ALL, 10)
-        self.shuntRLCEn = chk = wx.CheckBox(self, -1, "RLC-Shunt")
-        chk.SetValue(p.get("syndutShuntRLCEn", False))
-        chk.Bind(wx.EVT_CHECKBOX, self.GenSynthInput)
-        sizerH2.Add(chk, 0, c|wx.ALL, 10)
-        sizerV.Add(sizerH2, 0, c)
-
-        # set the current choice and show the dialog
-        if not dutType in choices:
-            dutType = choices[0]
-        self.sigTypeCB.SetSelection(choices.index(dutType))
-        self.OnType()
-        self.SetSizer(sizerV)
-        sizerV.Fit(self)
-        self.Show()
-        self.Bind(wx.EVT_CLOSE, self.Close)
-
-    #--------------------------------------------------------------------------
-    # DUT type changed: enable its subset of parameters.
-
-    def OnType(self, event=None):
-        iType = self.sigTypeCB.GetSelection()
-        parms = self.parms
-        for i in range(len(parms)):
-            for j in range(len(parms[0])):
-                name, l, v, used = parms[i][j]
-                self.parmBoxes[name].Enable(iType in used)
-        self.GenSynthInput()
-
-    #--------------------------------------------------------------------------
-    # Entering a text box: select all text to make it easier to replace.
-
-    def OnSetFocus(self, event):
-        tc = event.GetEventObject()
-        if isMac:
-            tc.SelectAll()
-        event.Skip()
-
-    #--------------------------------------------------------------------------
-    # Save current preferences on closing.
-
-    def Close(self, event=None):
-        global hardwarePresent, cb
-        p = self.prefs
-        p.syndutType = self.type
-        p.syndutWinPos = self.GetPosition().Get()
-
-        for parmRows in self.parms:
-            for name, l, v, u in parmRows:
-                value = floatSI(self.parmBoxes[name].GetValue())
-                setattr(p, "syndut_" + name, value)
-
-        p.syndutNoiseEn = self.noiseEn.GetValue()
-        p.syndutSerRLCEn = self.serRLCEn.GetValue()
-        p.syndutShuntRLCEn = self.shuntRLCEn.GetValue()
-
-        # deselect syndut, leaving nothing for input
-        msa.syndut = None
-        hardwarePresent = True
-        cb = None  # JGH commented out TEMPORARILY  12/23/13
-        if event:
-            event.Skip()
-
-    #--------------------------------------------------------------------------
-    # Adjust magnitudes in dBm and phases in degrees, pre-uncorrecting ADC.
-
-    def AdjustMag(self, magDbm):
-        magVp = 10**(magDbm/20) * self.vsrmw
-        if len(msa.magTableADC) > 0:
-            # use the ADC linearity table backwards to pre-uncorrect
-            magADC = interp(magDbm, msa.magTableDBm, msa.magTableADC)
-        else:
-            # given a linear estimate gain:
-            #   mag = (self._magdata / 65536. - 0.5) * 200.
-            # use the estimate backwards to uncorrect
-            magADC = ((magDbm / 200) + 0.5) * 65536
-        # scale ADC values to rough dBm to keep exponent in range
-        magADCdB = magADC/300 - 100
-        magVpAdj = 10**(magADCdB/20) * self.vsrmw
-        ##print ("magDbm=", magDbm[0], "magVp=", magVp[0], "magADC=", magADC[0],
-        ##      "magVpAdj=", magVpAdj[0]
-        if magVpAdj == None:
-            print ("AdjustMag: **** magVpAdj == None ****")
-            print ("len(table)=", len(msa.magTableADC))
-            print ("magDbm=", magDbm[0], len(magDbm))
-        return magVpAdj
-
-    def AdjustPhase(self, magDbm, Sdeg):
-        if len(msa.magTableADC) > 0:
-            # use the ADC linearity table backwards to pre-uncorrect
-            diffPhase = interp(magDbm, msa.magTableADC, msa.magTablePhase)
-            return modDegree(Sdeg + diffPhase)
-        return Sdeg
-
-    #--------------------------------------------------------------------------
-    # Generate synthetic data for spectrum test.
-
-    def GenSynthInput(self, event=None):
-        ##print ("Generating synthetic data for spectrum test"
-        self.type = sigType = self.sigTypeCB.GetValue()
-
-        for parmRows in self.parms:
-            for name, l, v, u in parmRows:
-                setattr(self, name, self.parmBoxes[name].GetValue())
-        p = self.prefs
-        # volts peak per sqrt mW for 50 ohm
-        self.vsrmw = sqrt(50/1000) * sqrt(2)
-        self.msaInputDbm = -20
-        self.noiseFloor = 10**(float(self.noisedbm)/20)
-        serRLCEn = self.serRLCEn.GetValue()
-        shuntRLCEn = self.shuntRLCEn.GetValue()
-
-        if sigType in ("Tones", "Square"):
-            # --- DUT is a waveform generator ---
-            nyquist = 4 * GHz
-            dt = 1 / (2*nyquist)
-            n = 2**16
-            t = arange(n) * dt
-            f0 = float(self.Fs) * MHz
-            magDbm = float(self.magdb)
-            downdb = float(self.downdb)
-            # generate spectrum from FFT of time domain waveform
-            if sigType == "Square":
-                # example: a 100 MHz -20 dBm square wave
-                # should have a fundamental up by db(4/pi), or -17.90 dBm
-                # then harmonics -27.45 dBm @ 300, -31.88 dBm @ 500.
-                magVp = self.AdjustMag(magDbm)
-                s = magVp * (2*(sin(2*pi*f0*t) > 0) - 1)
-            else:
-                # generate tones every Fs MHz, starting at magDbm and down
-                # by downBydb each
-                s = zeros_like(t)
-                for i in range(30):
-                    magVp = self.AdjustMag(downdb * i + magDbm)
-                    if i == 10:
-                        print ("GenSynth tones: i=", i, "magDbm=", magDbm, \
-                                "magVp=", magVp)
-                    s += magVp * sin(2*pi*f0*(i+1)*t)
-
-            if int(floatOrEmpty(self.windowing)):
-                # apply a window function to prep for FFT
-                p2n = 2*pi*arange(n) / (n - 1)
-                if self.windowing.upper() == "BN":
-                    # Blackman-Nuttall window
-                    w = 0.3635819 - 0.4891775*cos(p2n) + 0.1365995*cos(2*p2n) \
-                         - 0.0106411*cos(3*p2n)
-                else:
-                    # Flat top window -- good for measuring dBm
-                    w = 1 - 1.93*cos(p2n) + 1.29*cos(2*p2n) - \
-                         0.388*cos(3*p2n) + 0.032*cos(4*p2n)
-                wArea = w.sum()
-                w *= n / wArea
-                s *= w
-
-            # transform into a spectrum
-            nf = n/2
-            self.synSpecVp = fft(s)[:nf] / nf
-            self.synSpecF = 2*nyquist/MHz * arange(nf)/n
-
-        else:
-            # --- DUT emulates a circuit ---
-            f0 = max(p.fStart, 0.001)
-            f1 = p.fStop
-            n = 2*p.nSteps + 1
-            if p.isLogF:
-                self.synSpecF = f = logspace(log10(f0), log10(f1), n)
-            else:
-                self.synSpecF = f = linspace(f0, f1, n) # JGH linspace comes from numpy
-            w = 2*pi*f*MHz
-            R0 = float(self.R0)
-
-            if sigType == "Crystal":
-                Rm = float(self.Rm)
-                Lm = float(self.Lm) * mH
-                Cm = float(self.Cm) * fF
-                Cp = float(self.Cp) * pF
-                print ("Crystal: Rm=", Rm, "Lm=", Lm, "Cm=", Cm, "Cp=", Cp, \
-                        "f0=", f0, "f1=", f1, "n=", n)
-                Xp = -1/(w*Cp)
-                Xm = w*Lm - 1/(w*Cm)
-                Zs = 1j*Xp * (Rm + 1j*Xm) / (Rm + 1j*(Xm + Xp))
-
-                # DUT in series
-                S21 = 1 / (Zs/(2*R0) + 1)
-                # DUT shunt
-                ##S21 = 1 / (R0/(2*Zsh) + 1)
-
-            elif sigType == "RLC":
-                if debug:
-                    print ("RLC")
-                Rs = max(floatSI(self.Rs), 0)
-                Ls = max(floatSI(self.Ls), 1*pH)
-                Cs = max(floatSI(self.Cs), 1*fF)
-                Rsh = max(floatSI(self.Rsh), 0)
-                Lsh = max(floatSI(self.Lsh), 1*pH)
-                Csh = max(floatSI(self.Csh), 1*fF)
-                isSerLs  = self.isSerLs = int(floatSI(self.isSerLs))
-                isSerLsh = self.isSerLsh = int(floatSI(self.isSerLsh))
-
-                Zs =  par3(Rs,  1j*w*Ls,  -1j/(w*Cs),  isSerLs)
-                Zsh = par3(Rsh, 1j*w*Lsh, -1j/(w*Csh), isSerLsh)
-
-                print ("RLC: Rs=", Rs, "Ls=", Ls, "Cs=", Cs, "ser=", isSerLs, \
-                    "Rsh=", Rsh, "Lsh=", Lsh, "Csh=", Csh, "ser=", isSerLsh)
-
-                ##print ("RLC Fixture: series=", serRLCEn, "shunt=", shuntRLCEn
-                # combined series & shunt
-                if serRLCEn and shuntRLCEn:
-                    Zp = par2(Zsh, R0)
-                    S21 = 2 * Zp / (R0 + Zs + Zp)
-                elif serRLCEn:
-                    # DUT in series
-                    S21 = 1 / (Zs/(2*R0) + 1)
-                elif shuntRLCEn:
-                    # DUT shunt
-                    S21 = 1 / (R0/(2*Zsh) + 1)
-                else:
-                    S21 = zeros_like(Zsh) + 1
-                ##print ("RLC: Zs=", Zs[1], "Zsh=", Zsh[1], "S21=", S21[1]
-
-            elif sigType == "Cheb Filter":
-                # Chebyshev I filter for testing ripple measurement
-                Fs = max(float(self.Fs), 0)
-                BW = max(float(self.BW), 0) * kHz / MHz
-                down = 10**(float(self.downdb)/20)
-                ripple = 0.05 * max(float(self.ripple), 0) + 0.01
-                Fa = Fs - 2*BW
-                Fb = Fs + 2*BW
-                ia = int(n * (Fa - f0) / (f1 - f0))
-                ib = int(n * (Fb - f0) / (f1 - f0))
-                iab = ib - ia
-                iam = max(min(ia, n-1), 0)
-                ibm = max(min(ib, n-1), 0)
-                S21 = zeros(n) + 1e-10
-                print ("Fa=", Fa, "n=", n, "f1=", f1, "ia=", ia, "ib=", ib)
-                if (ib - ia) > 0:
-                    # degree 8 Chebyshev
-                    T = poly1d((128, 0, -256, 0, 160, 0, -32, 0, 1))
-                    ##print T
-                    x = 8*arange(float(iab))/iab - 4
-                    # ripple=0.5 = -6.0 dB gives 9.511 dB
-
-                    y = down / (ripple*T(x) + 1.001)
-                    if ia > 0:
-                        S21[iam:ibm] = y[0:ibm-iam]
-                    else:
-                        S21[:ibm] = y[-ia:ibm-ia]
-
-            elif sigType == "Through":
-                # Through -- for calibrating S21 baseline
-                print ("Through")
-                S21 = zeros(n) + 1+0j
-
-            elif sigType == "Shunt Open":
-                # Shunt open (and series shorted: same as Through, except
-                # with opposite phase)
-                S21 = zeros(n) + 1 - 1e-10-1e-10j
-
-            elif sigType == "Shunt Short":
-                # Shunt shorted
-                S21 = zeros(n) + 0+0j
-
-            elif sigType == "Shunt Load":
-                # 50 ohm Shunt
-                S21 = zeros(n) + (2/3)+0j
-
-            if p.mode == MSA.MODE_VNARefl and not \
-                    (p.isSeriesFix or p.isShuntFix):
-                # reflectance mode: if fixture is a bridge, transform
-                # S21 to S11 (here called "S21")
-                S21, Z = EquivS11FromS21(S21, p.isSeriesFix, R0)
-            ##print ("SynDUT: S21=", S21[0]
-
-            synSpecVp = self.AdjustMag(db(abs(S21)) + self.msaInputDbm)
-            self.synSpecVp = synSpecVp * exp(1j*angle(S21))
-
-        # add noise floor, Vp to rough dBm, then unscale to get ADC values
-        self.RegenSynthInput()
-
-    #--------------------------------------------------------------------------
-    # Regenerate synthetic data, just updating dynamic noise portion.
-
-    def RegenSynthInput(self):
-        # add a noise floor
-        synSpecVp = self.synSpecVp
-        if self.noiseEn.GetValue():
-            n = len(synSpecVp)
-            r = self.AdjustMag(db(random.random(n) * self.noiseFloor))
-            synSpecVp = synSpecVp + r * exp(1j*2*pi*random.random(n))
-
-        # Vp to rough dBm, then unscale to get ADC values again
-        self.synSpecM = (db(abs(synSpecVp)/self.vsrmw) + 100) * 300
-        synSpecP = angle(synSpecVp, deg=True)
-        self.synSpecP = self.AdjustPhase(self.synSpecM, synSpecP) / 360 * \
-                    65536
-
-
 # Create a new Event class and EVT binder function
 (UpdateGraphEvent, EVT_UPDATE_GRAPH) = newevent.NewEvent()
-
 
 #==============================================================================
 # Modular Spectrum Analyzer.
@@ -2098,7 +1621,7 @@ class MSA:
     def __init__(self, frame):
         self.frame = frame
         p = frame.prefs
-        self.mode = p.get("mode", self.MODE_VNATran) # JGH: This is the default mode for EON
+        self.mode = p.get("mode", self.MODE_SA) # JGH: This is the default mode for EON
         # Exact frequency of the Master Clock (in MHz).
         self.masterclock = p.get("masterclock", 64.)
         # 2nd LO frequency (MHz). 1024 is nominal, Must be integer multiple
@@ -2148,7 +1671,7 @@ class MSA:
         # set when in inverted-phase mode
         self.invPhase = 0
         # amount (degrees) to subtract from phase to invert it
-        self.invDeg = p.get("invDeg", 180.)	# Default on Startup
+        self.invDeg = p.get("invDeg", 180.)    # Default on Startup
         # set when running calibration
         self.calibrating = False
         # calibration level (0=None, 1=Base, 2=Band)
@@ -2251,7 +1774,8 @@ class MSA:
     #--------------------------------------------------------------------------
     # Calculate all steps for LO1 synth.
 
-    def _CalculateAllStepsForLO1Synth(self, thisfreq):
+    def _CalculateAllStepsForLO1Synth(self, thisfreq, band):
+        self._GHzBand = band
         if self._GHzBand != 1:
             # get equivalent 1G frequency
             thisfreq = self._Equiv1GFreq(thisfreq)
@@ -2261,7 +1785,8 @@ class MSA:
     #--------------------------------------------------------------------------
     # Calculate all steps for LO3 synth.
 
-    def _CalculateAllStepsForLO3Synth(self, TrueFreq):
+    def _CalculateAllStepsForLO3Synth(self, TrueFreq, band):
+        self._GHzBand = band
         if self._GHzBand == 1:
             thisfreq = TrueFreq
         else:
@@ -2310,77 +1835,74 @@ class MSA:
     # This format guarantees that the common clock will
     # not transition with a data transition, preventing crosstalk in LPT cable.
 
-    def _CommandAllSlims(self, f):
+    # The attenuator code is left here for future implementation
+
+##    def _CommandAllSlims(self, f):
+    def _CommandAllSlims(self):    
         p = self.frame.prefs
-        band = min(max(int(f/1000) + 1, 1), 3) # JGH Values 1,2,3
-        if debug:
-            print (">>>2231<<< COMMAND ALL SLIMS")
-            print (">>>2232<<< freq=", f, "band=", band)
-        if band != self.lastBand or p.stepAttenDB != self.lastStepAttenDB:
-            # shift attenuator value into pair of 6-bit attenuators
-            self._SetFreqBand(band)
-            # each attenuator value is 0-31 in 0.5-dB increments
-            value = int(p.stepAttenDB * 2)
-            if 1:
-                # dual attenuators
-                if value > 0x3f:
-                    value = (0x3f << 6) | (value - 0x3f)   # (bitwise OR)
-                for i in range(12):
-                    bit = ((value >> 11) & 1) ^ 1
-                    value <<= 1
-                    self._SetFreqBand(band, (bit << cb.P4_AttenDataBit))
-                    self._SetFreqBand(band, (bit << cb.P4_AttenDataBit) | cb.P4_AttenClk)
-                    self._SetFreqBand(band, (bit << cb.P4_AttenDataBit))
+        f = self._freqs[0]
+        band = min(max(int(f/1000) + 1, 1), 3) # JGH Initial band
+
+        if p.get("stepAtten", False) == True:
+            # JGH: Attenuator will be using port P100 (a non existing port, TBD later) 
+            if band != self.lastBand or p.stepAttenDB != self.lastStepAttenDB:
+                # shift attenuator value into pair of 6-bit attenuators
+                self._SetFreqBand(band)
+                # each attenuator value is 0-31 in 0.5-dB increments
+                value = int(p.stepAttenDB * 2)
+                if 1:
+                    # dual attenuators
+                    if value > 0x3f:
+                        value = (0x3f << 6) | (value - 0x3f)   # (bitwise OR)
+                    for i in range(12):
+                        bit = ((value >> 11) & 1) ^ 1
+                        value <<= 1
+                        self._SetFreqBand(band, (bit << cb.P100_AttenDataBit))
+                        self._SetFreqBand(band, (bit << cb.P100_AttenDataBit) | cb.P100_AttenClk)
+                        self._SetFreqBand(band, (bit << cb.P100_AttenDataBit))
+                else:
+                    if 0:
+                        # clock scope loop
+                        while 1:
+                            self._SetFreqBand(band, 0)
+                            self._SetFreqBand(band, cb.P100_AttenClk)
+
+                    # single attenuator
+                    for i in range(6):
+                        bit = ((value >> 5) & 1) ^ 1
+                        value <<= 1
+                        self._SetFreqBand(band, (bit << cb.P100_AttenDataBit))
+                        self._SetFreqBand(band, (bit << cb.P100_AttenDataBit) | cb.P100_AttenClk)
+                        self._SetFreqBand(band, (bit << cb.P100_AttenDataBit))
+                # latch attenuator value and give relays time to settle
+                self._SetFreqBand(band, cb.P100_AttenLE)
+                self._SetFreqBand(band)
+                self.lastStepAttenDB = p.stepAttenDB
+                cb.msWait(100)
+
+
+        step1k = self.step1k ; step2k =self.step2k
+        if p.sweepDir == 0:
+            if ((step1k != None and self._step == (step1k - 1)) or \
+                (step2k != None and self._step == (step2k - 1))):
+                self.sendByteList()
+                band = band + 1
+                self._SetFreqBand(band)
+                cb.msWait(100)
             else:
-                if 0:
-                    # clock scope loop
-                    while 1:
-                        self._SetFreqBand(band, 0)
-                        self._SetFreqBand(band, cb.P4_AttenClk)
+                self.sendByteList()
+        if p.sweepDir == 1:
+            if (self._step == (step1k) or self._step == (step2k)):
+                self.sendByteList()
+                band = band - 1
+                self._SetFreqBand(band)
+                cb.msWait(100)
+            else:
+                self.sendByteList()
+    #--------------------------------------------------------------------------
 
-                # single attenuator
-                for i in range(6):
-                    bit = ((value >> 5) & 1) ^ 1
-                    value <<= 1
-                    self._SetFreqBand(band, (bit << cb.P4_AttenDataBit))
-                    self._SetFreqBand(band, (bit << cb.P4_AttenDataBit) | cb.P4_AttenClk)
-                    self._SetFreqBand(band, (bit << cb.P4_AttenDataBit))
-            # latch attenuator value and give relays time to settle
-            self._SetFreqBand(band, cb.P4_AttenLE)
-            self._SetFreqBand(band)
-            self.lastStepAttenDB = p.stepAttenDB
-            cb.msWait(100)
-
-        self._CalculateAllStepsForLO1Synth(f)
-        self._CalculateAllStepsForLO3Synth(f)
-
-        # PLLs go out MSB first, with a 16-bit leader of zeros
-        PLL1bits = LO1.PLLbits
-        PLL3bits = LO3.PLLbits
-        msb = 23 + 16
-        shift1 = msb - cb.P1_PLL1DataBit
-        shift3 = msb - cb.P1_PLL3DataBit
-        mask = 1 << msb
-        # pre-shift 40 bits for each DDS so the LSB aligns with its port
-        # serial-data bit
-        DDS1bits = LO1.DDSbits << cb.P1_DDS1DataBit
-        DDS3bits = LO3.DDSbits << cb.P1_DDS3DataBit
-        if debug:
-            print ("PLL1bits=0x%010x" % PLL1bits)
-            print ("DDS1bits=0x%010x" % DDS1bits)
-            print ("DDS3bits=0x%010x" % DDS3bits)
-
-        byteList = []   # JGH 2/9/14
-        for i in range(40):
-            # combine the current bit for each device and clk them out together
-##            a = (DDS3bits & cb.P1_DDS3Data) + ((PLL3bits & mask) >> shift3) + \
-##                (DDS1bits & cb.P1_DDS1Data) + ((PLL1bits & mask) >> shift1) + \
-##                self.bitsRBW # JGH line changed for next one
-            a = (DDS3bits & cb.P1_DDS3Data) + ((PLL3bits & mask) >> shift3) + \
-                (DDS1bits & cb.P1_DDS1Data) + ((PLL1bits & mask) >> shift1)
-            byteList.append(a)  # JGH 2/9/14
-            # shift next bit into position
-            DDS3bits >>= 1; PLL3bits <<= 1; DDS1bits >>= 1; PLL1bits <<= 1
+    def sendByteList(self):            
+        byteList = self.SweepArray[self._step]
         cb.SendDevBytes(byteList, cb.P1_Clk)    # JGH 2/9/14
 
         # print (">>>>> 2106, Remove data, leaving bitsRBW data to filter bank"
@@ -2395,12 +1917,13 @@ class MSA:
         # remove the added latch signal to PDM, leaving just the static data
         cb.SetP(2, pdmcmd)
         cb.setIdle
-        if band != self.lastBand:
-            self.lastBand = band
-            # give PLLs more time to settle too
-            cb.msWait(100)
-
-
+##        f = self._freqs[self._step]
+##        band = min(max(int(f/1000) + 1, 1), 3) # JGH Values 1,2,3
+##        if band != self.lastBand:
+##            self.lastBand = band
+##            # give PLLs more time to settle too
+##        cb.msWait(100)
+                     
     #--------------------------------------------------------------------------
     # Command just the PDM's static data.
 
@@ -2415,9 +1938,9 @@ class MSA:
         self._GHzBand = band
         band += extraBits
         if self._GHzBand == 2:
-            bitsBand = 64 * 0
+            self.bitsBand = 64 * 0
         else:
-            bitsBand = 64 * 1
+            self.bitsBand = 64 * 1
         cb.SetP(4, self.bitsVideo + self.bitsRBW + self.bitsFR + \
                 self.bitsTR + self.bitsBand + self.bitsPulse)
         ##print ("SetFreqBand: %02x" % band
@@ -2439,12 +1962,6 @@ class MSA:
         if not cb:
             if isWin and winUsesParallelPort:
                 cb = MSA_CB_PC()
-            # JGH added 1/19/14
-            elif isRpi:
-                cb = MSA_RPI()
-            elif isBBB:
-                cb = MSA_BBB()
-            # JGH ends 1/19/14
             else:
                 cb = MSA_CB_USB()
                 cb.FindInterface()
@@ -2463,8 +1980,9 @@ class MSA:
         msaGlobal.SetCb(cb)
 
         if not hardwarePresent:
-            print ("\n>>>2403<<< NO HARDWARE PRESENT")
-            print ("\n>>>2404<<< GENERATING SYNTHETIC DATA") # JGH syndutHook2
+            print ("\n>>>2462<<<    NO HARDWARE PRESENT")
+            print ("\n>>>2463<<< GENERATING SYNTHETIC DATA") # JGH syndutHook2
+            from synDUT import SynDUTDialog
             self.syndut = SynDUTDialog(self.gui)
             wx.Yield()
             self.gui.Raise()
@@ -2479,6 +1997,7 @@ class MSA:
         PLL2phasepol = p.get("PLL2phasepol", 1)
         PLL3phasepol = p.get("PLL3phasepol", 0)
         appxdds1 =  p.get("appxdds1", 10.7)
+        appxLO2 = p.get("appxLO2", 1024.)
         appxdds3 =  p.get("appxdds3", 10.7)
         dds1filbw = p.get("dds1filbw", 0.015)
         dds3filbw = p.get("dds3filbw", 0.015)
@@ -2492,13 +2011,11 @@ class MSA:
         # JGH above three lines changed to
         LO1 = MSA_LO(1, 0., cb.P1_PLL1DataBit, cb.P2_le1, cb.P2_fqud1, \
                      PLL1phasefreq, PLL1phasepol, appxdds1, dds1filbw, PLL1type)
-        LO2 = MSA_LO(2, 1024., cb.P1_PLL2DataBit, cb.P2_le2, 0, PLL2phasefreq, \
+        LO2 = MSA_LO(2, appxLO2, cb.P1_PLL2DataBit, cb.P2_le2, 0, PLL2phasefreq, \
                      PLL2phasepol, 0, 0, PLL2type)
         LO3 = MSA_LO(3, 0., cb.P1_PLL3DataBit, cb.P2_le3, cb.P2_fqud3, PLL3phasefreq, \
                      PLL3phasepol, appxdds3, dds3filbw, PLL3type)
         # JGH change end
-
-
 
         # 5. Command Filter Bank to Path one. Begin with all data lines low
         cb.OutPort(0)
@@ -2507,12 +2024,66 @@ class MSA:
         # begin with all control lines low
         cb.OutControl(cb.contclear)
 
-        # JGH added 5a. Set Port 4 switches 2/24/14
-        self.switchRBW = p.get("switchRBW", 0) # Values 0-3
+        self._SetFreqBand(1)
+##        self.lastBand = 1
+        self.lastStepAttenDB = -1 # TODO: ATTENUATOR
+
+        # 6.if configured, initialize DDS3 by reseting to serial mode.
+        # Frequency is commanded to zero
+        LO3.ResetDDSserSLIM()
+
+        # 7.if configured, initialize PLO3. No frequency command yet.
+        # JGH starts 2/1/14
+        LO3.rcounter, LO3.pdf = LO3.CreateRcounter(LO3.appxdds)
+        if debug:
+            print(">>>2533<<< Step7 LO3.rcounter, LO3.pdf: ", LO3.rcounter, LO3.pdf)
+        # JGH ends 2/1/14
+        LO3.CommandPLLR()
+
+        # 8.initialize and command PLO2 to proper frequency
+
+        # CreatePLL2R (needs: appxpdf, masterclock)
+        LO2.rcounter, LO2.pdf = LO2.CreateRcounter(msa.masterclock) # JGH starts 2/1/14
+        #                       (creates: rcounter, pdf)
+        if debug:
+            print(">>>2543<<< Step8 LO2.rcounter, LO2.pdf: ", LO2.rcounter, LO2.pdf)
+
+        # Command PLL2R and Init Buffers (needs:PLL2phasepolarity,SELT,PLL2)
+        LO2.CommandPLLR()
+        # CreatePLL2N
+        appxVCO = self.appxLO2 # JGH: appxLO2 is the Hardware Config Dialog value
+        # 8a. CreateIntegerNcounter(needs: PLL2 (aka appxVCO), rcounter, fcounter)
+        LO2.CreateIntegerNcounter(appxVCO, msa.masterclock)
+        #                     (creates: ncounter, fcounter(0))
+        LO2.CreatePLLN()    # (needs: ncounter, fcounter, PLL2)
+        #                     (creates: Bcounter,Acounter, and N Bits N0-N23)
+        # 8b. Actual LO2 frequency
+        LO2.freq = ((LO2.Bcounter*LO2.preselector) + LO2.Acounter + \
+                    (LO2.fcounter/16))*LO2.pdf
+        if debug:
+            print(">>>2559<<< Step8b LO2.freq: ", LO2.freq)
+        # 8c. CommandPLL2N
+        # needs:N23-N0,control,Jcontrol=SELT,port,contclear,LEPLL=8
+        # commands N23-N0,old ControlBoard
+        LO2.CommandPLL(LO2.PLLbits)
+        if debug:
+            print(">>>2566<<< Step8c LO2 commanded ******")
+        # 9.Initialize PLO 1. No frequency command yet.
+        # CommandPLL1R and Init Buffers
+        # needs:rcounter1,PLL1phasepolarity,SELT,PLL1
+        # Initializes and commands PLL1 R Buffer(s)
+        LO1.CommandPLLR()
+        # 10.initialize DDS1 by resetting. Frequency is commanded to zero
+        # It should power up in parallel mode, but could power up in a bogus
+        #  condition. reset serial DDS1 without disturbing Filter Bank or PDM
+        LO1.ResetDDSserSLIM()   # SCOTTY TO MODIFY THIS TO LIMIT HIGH CURRENT
+
+        # JGH added 10a. Set Port 4 switches 2/24/14
         self.vFilterSelIndex = p.get("vFilterSelIndex", 1)   # Values 0-3
-        self.switchBand = p.get("switchBand", 1) # 1: 0-1GHz, 2: 1-2GHz, 3: 2-3GHz
-        self.switchTR = p.get("switchTR", 0) # Values 0,1
+        self.switchRBW = p.get("switchRBW", 0) # Values 0-3
         self.switchFR = p.get("switchFR", 0) # Values 0,1
+        self.switchTR = p.get("switchTR", 0) # Values 0,1
+        self.switchBand = p.get("switchBand", 1) # 1: 0-1GHz, 2: 1-2GHz, 3: 2-3GHz
         self.switchPulse = 0 # JGH Oct23 Set this here and follow with a 1 sec delay
         # Pulse must be added here, in the mean time use 0
         self.bitsVideo = self.vFilterSelIndex # V0/V1 Bits 0,1
@@ -2524,92 +2095,9 @@ class MSA:
         
         cb.SetP(4, self.bitsVideo + self.bitsRBW + self.bitsFR + \
                 self.bitsTR + self.bitsBand + self.bitsPulse)
+        if debug:
+            print(">>>2580<<< Steps9/10 commanded and switches set ************")
         # JGH addition ended
-
-        self._SetFreqBand(1)
-        self.lastBand = 1
-        self.lastStepAttenDB = -1
-
-        # 6.if configured, initialize DDS3 by reseting to serial mode.
-        # Frequency is commanded to zero
-        LO3.ResetDDSserSLIM()
-
-        # 7.if configured, initialize PLO3. No frequency command yet.
-        # JGH starts 2/1/14
-        LO3.rcounter, LO3.pdf = LO3.CreateRcounter(LO3.appxdds)
-        # JGH ends 2/1/14
-        LO3.CommandPLLR()
-
-        # 8.initialize and command PLO2 to proper frequency
-##        if p.cftest == 0: # JGH starts 2/3/14
-##            print (">>>2489<<< cftest", p.cftest)
-        # CreatePLL2R (needs: appxpdf, masterclock)
-        LO2.rcounter, LO2.pdf = LO2.CreateRcounter(msa.masterclock) # JGH starts 2/1/14
-        #                       (creates: rcounter, pdf)
-        # Command PLL2R and Init Buffers (needs:PLL2phasepolarity,SELT,PLL2)
-        LO2.CommandPLLR()
-        # CreatePLL2N
-        appxVCO = self.appxLO2 # JGH: appxLO2 is the Hardware Config Dialog value
-        # CreateIntegerNcounter(needs: PLL2 (aka appxVCO), rcounter, fcounter)
-        LO2.CreateIntegerNcounter(appxVCO, msa.masterclock)
-        #                      (creates: ncounter, fcounter(0))
-        #                      (needs: ncounter, fcounter, PLL2)
-        LO2.CreatePLLN()
-        #                      (creates: Bcounter,Acounter, and N Bits N0-N23)
-        # actual LO2 frequency
-        LO2.freq = ((LO2.Bcounter*LO2.preselector) + LO2.Acounter + \
-                    (LO2.fcounter/16))*LO2.pdf
-        # CommandPLL2N
-        # needs:N23-N0,control,Jcontrol=SELT,port,contclear,LEPLL=8
-        # commands N23-N0,old ControlBoard
-        LO2.CommandPLL(LO2.PLLbits)
-
-##            # def CommandLO2forCavTest(self):
-##            print (">>>2512<<< cftest", p.cftest)
-####            appxVCO = msa.finalfreq + PLL1array(thisstep,43)  # ??????????????????? PLL1array
-##            LO2.freq = msa.finalfreq + LO1.freq
-##            print "LO1.freq, finalfreq, LO2.freq", LO1.freq, msa.finalfreq, LO2.freq
-##            reference = msa.masterclock
-##            print "masterclock", msa.masterclock
-####            rcounter = rcounter2
-##            LO2.rcounter, LO2.pdf = LO2.CreateRcounter(msa.masterclock) # JGH 2/5/14
-##            self.rcounter = LO2.rcounter
-##            print "LO2.rcounter", LO2.rcounter
-##            # CreateIntegerNcounter needs:appxVCO,reference,rcounter ; creates:ncounter,fcounter(0)
-####            self.CreateIntegerNcounter(appxVCO ,reference, rcounter)
-##            LO2.CreateIntegerNcounter(LO2.freq, reference)
-##            print "LO2.CreateIntegerNcounter", LO2.CreateIntegerNcounter(LO2.freq, reference)
-####            ncounter2 = self.ncounter
-####            fcounter2 = self.fcounter
-##            # CreatePLL2N needs:ncounter,fcounter,PLL2 ; returns with Bcounter,Acounter, and N Bits N0-N23
-####            self.CreatePLL2N(ncounter, fcounter, PLL2)
-##            LO2.CreatePLLN()
-##            print "LO2.CreatePLLN()", LO2.CreatePLLN()
-##            Bcounter2 = self.Bcounter
-##            Acounter2 = self.Acounter
-##            # Calculate actual LO2 frequency
-##            LO2.freq = ((sel.Bcounter*LO2.preselector) + self.Acounter+(self.fcounter/16))*LO2.pdf #actual LO2 frequency   ????? pdf2 = LO2.pdf
-##            #CommandPLL2N
-####            Jcontrol = SELT
-####            LEPLL = 8
-####            datavalue = 16
-####            levalue = 1
-##            #CommandPLL needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard
-####            self.CommandPLL(N23-N0, control, Jcontrol, port, contclear, LEPLL)
-##            LO2.CommandPLL(LO2.PLLbits)
-##        # JGH ends 2/3/14
-
-        # 9.Initialize PLO 1. No frequency command yet.
-        # CommandPLL1R and Init Buffers
-        # needs:rcounter1,PLL1phasepolarity,SELT,PLL1
-        # Initializes and commands PLL1 R Buffer(s)
-        LO1.CommandPLLR()
-        # 10.initialize DDS1 by resetting. Frequency is commanded to zero
-        # It should power up in parallel mode, but could power up in a bogus
-        #  condition. reset serial DDS1 without disturbing Filter Bank or PDM
-        LO1.ResetDDSserSLIM()   # SCOTTY TO MODIFY THIS TO LIMIT HIGH CURRENT
-
-
     #--------------------------------------------------------------------------
     # Read 16-bit magnitude and phase ADCs.
 
@@ -2660,7 +2148,8 @@ class MSA:
             if hardwarePresent:
                 self.LogEvent("CaptureOneStep hardware, f=%g" % f)
                 # set MSA to read frequency f
-                self._CommandAllSlims(f)
+##                self._CommandAllSlims(f) # SweepArray doesn't need f
+                self._CommandAllSlims()
 
     # ------------------------------------------------------------------------------
                 if p.cftest ==1:
@@ -2676,7 +2165,8 @@ class MSA:
                 if step == 0:
                     # give the first step extra time to settle
                     cb.msWait(200)
-                    self._CommandAllSlims(f)
+##                    self._CommandAllSlims(f)
+                    self._CommandAllSlims() # SweepArray doesn't need f
                 cb.msWait(self.wait)
                 # read raw magnitude and phase
                 self.LogEvent("CaptureOneStep read")
@@ -2946,7 +2436,16 @@ class MSA:
             parms.fStart = fStart = max(fStart, 1e-6)
             self._freqs = logspace(log10(fStart), log10(fStop), num=nSteps+1)
         else:
-            self._freqs = linspace(fStart, fStop, nSteps+1) # JGH linspace comes from numpy self._freqs = linspace(self._fStart, self._fStop, nSteps+1)
+            # JGH linspace comes from numpy
+            # self._freqs = linspace(self._fStart, self._fStop, nSteps+1)
+            self._freqs = linspace(fStart, fStop, nSteps+1)
+
+        self.step1k = self.step2k = None            
+        for x, y in enumerate(self._freqs):
+            if y == 1000:
+                self.step1k = x ; print("1000 is at step #", x)
+            if y == 2000:
+                self.step2k = x ; print("2000 is at step #", x)
 
     #--------------------------------------------------------------------------
     # Start an asynchronous scan of a spectrum. The results may be read at
@@ -2974,11 +2473,69 @@ class MSA:
     def ContinueScan(self):
         self.LogEvent("ContinueScan: step=%d" % self._step)
         if not self._scanning:
+            self.CreateSweepArray() # Creates GEORGE
             self.LogEvent("ContinueScan start_new_thread")
             self.scanEnabled = self._scanning = True
             thread.start_new_thread(self._ScanThread, ())
         self.LogEvent("ContinueScan exit")
 
+    #--------------------------------------------------------------------------
+    # SweepArray
+    # (send data and clocks without changing Filter Bank)
+    #  0-15 is DDS1bit*4 + DDS3bit*16, data = 0 to PLL 1 and PLL 3.
+    # (see CreateCmdAllArray). new Data with no clock,latch high,latch low,
+    # present new data with clock,latch high,latch low. repeat for each bit.
+    # (40 data bits and 40 clocks for each module, even if they don't need that many)
+    # This format guarantees that the common clock will
+    # not transition with a data transition, preventing crosstalk in LPT cable.
+
+    def CreateSweepArray(self): # aka GEORGE
+        if 1:
+            print(">>>2975<<< Creating GEORGE, the SweepArray")
+        
+        SweepArray = []
+       
+        #p = self.frame.prefs
+        for f in self._freqs:
+            band = min(max(int(f/1000) + 1, 1), 3) # JGH Values 1,2,3
+            
+            self._CalculateAllStepsForLO1Synth(f, band)
+            self._CalculateAllStepsForLO3Synth(f, band)
+            
+            # PLLs go out MSB first, with a 16-bit leader of zeros
+            PLL1bits = LO1.PLLbits
+            PLL3bits = LO3.PLLbits
+            msb = 23 + 16
+            shift1 = msb - cb.P1_PLL1DataBit
+            shift3 = msb - cb.P1_PLL3DataBit
+            mask = 1 << msb
+            # pre-shift 40 bits for each DDS so the LSB aligns with its port
+            # serial-data bit
+            DDS1bits = LO1.DDSbits << cb.P1_DDS1DataBit
+            DDS3bits = LO3.DDSbits << cb.P1_DDS3DataBit
+            if debug:
+                print ("PLL1bits=0x%010x" % PLL1bits)
+                print ("DDS1bits=0x%010x" % DDS1bits)
+                print ("DDS3bits=0x%010x" % DDS3bits)
+
+            byteList = []   # JGH 2/9/14
+            for i in range(40):
+                # combine the current bit for each device and clk them out together
+    ##            a = (DDS3bits & cb.P1_DDS3Data) + ((PLL3bits & mask) >> shift3) + \
+    ##                (DDS1bits & cb.P1_DDS1Data) + ((PLL1bits & mask) >> shift1) + \
+    ##                self.bitsRBW # JGH line changed for next one
+                a = (DDS3bits & cb.P1_DDS3Data) + ((PLL3bits & mask) >> shift3) + \
+                    (DDS1bits & cb.P1_DDS1Data) + ((PLL1bits & mask) >> shift1)
+                byteList.append(a)  # JGH 2/9/14
+                # shift next bit into position
+                DDS3bits >>= 1; PLL3bits <<= 1; DDS1bits >>= 1; PLL1bits <<= 1
+            SweepArray.append(byteList)
+        if 1:
+            print(">>>3015<<< arraySweeper finished with length: ", len(SweepArray))
+
+        #step1k = self.step1k ; step2k =self.step2k
+        self.SweepArray = SweepArray
+            
     #--------------------------------------------------------------------------
     # Stop current scan.
 
@@ -4667,7 +4224,7 @@ class GraphPanel(wx.Panel):
                     dc.SetPen(wx.Pen(vColor, 5, wx.SOLID))
                     dc.DrawLine(x, y, x + 20, y)
                     dc.SetTextForeground(vColor)
-                    unit = self.vScales[tr.iScale].dataType.units
+                    #unit = self.vScales[tr.iScale].dataType.units
                     ##text = "%s (%s)" % (name, unit)
                     text = name
                     (w, h) = dc.GetTextExtent(text)
@@ -4891,7 +4448,7 @@ class GraphPanel(wx.Panel):
             if not tr.displayed:
                 continue
             fullLen = len(tr.v)
-            isPhase = tr.units == "Deg"
+            #isPhase = tr.units == "Deg"
             useFull = not tr.isMain or self.eraseOldTrace
             if useFull:
                 nv = fullLen
@@ -5400,7 +4957,7 @@ class VarDialog(wx.Dialog):
         self.frame = frame
         self.prefs = p = frame.prefs
         framePos = frame.GetPosition()
-        frameSize = frame.GetSize()
+        #frameSize = frame.GetSize()
         pos = p.get("varWinPos", (frame.screenWidth-200, framePos.y))
         textList = msa.GetVarsTextList()
         size = (200, 40 + (fontSize+6)*(len(textList)))
@@ -5610,7 +5167,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         # JGH 2/15/14: PLL mode no longer used
 
         cvl = wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT
-        cvr = wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT
+        #cvr = wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT
         # JGH addition end
 
         tc = wx.TextCtrl(self, -1, gstr(LO1.appxdds), size=tsz) # JGH 2/2/14
@@ -5699,7 +5256,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
 
         sizerH0.Add(sizerG1, 0, wx.ALL, 10)
         sizerV2 = wx.BoxSizer(wx.VERTICAL) # DEFINE SECOND COLUMN SIZER
-
+        sizerH2 = wx.BoxSizer(wx.HORIZONTAL)
         # Final RBW Filter config
         self.rbwFiltersTitle = \
                 wx.StaticBox(self, -1, "Final RBW Filters" ) #JGH 12/25/13
@@ -5721,7 +5278,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
 ##        gr.Bind(wx.grid.EVT_GRID_SELECT_CELL, self.OnRBWCellSel)
 ##        gr.Bind(wx.grid.EVT_GRID_LABEL_LEFT_CLICK, self.OnRBWLabelSel)
 
-        sizerV2.Add(sizerV2A, 0, wx.ALL|wx.EXPAND, 5)
+        sizerH2.Add(sizerV2A, 0, wx.ALL|wx.EXPAND, 5)
 
         # Video Filters config
 
@@ -5744,8 +5301,38 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         gv.EnableEditing(1)
         sizerV2B.Add(gv, 1, flag=cv)
 
-        sizerV2.Add(sizerV2B, 0, wx.ALL|wx.EXPAND, 4)
+        sizerH2.Add(sizerV2B, 0, wx.ALL|wx.EXPAND, 4)
+        sizerV2.Add(sizerH2, 0)
 
+        # Optional Modules
+        optModsTitle = \
+                wx.StaticBox(self, -1, "Optional Modules" ) #JGH 3/3/14
+        sizerH3 = wx.StaticBoxSizer(optModsTitle, wx.HORIZONTAL)
+        sizerV3A = wx.BoxSizer(wx.VERTICAL)
+        st = wx.StaticText(self, -1, "Available Mods")
+        sizerV3A.Add(st, 0, flag=c)
+        availModList = wx.ListBox(self, -1, pos=wx.DefaultPosition, \
+                                  size=(120,120), choices=['DUTatten', 'SyntDUT'], \
+                                  style=wx.LB_ALWAYS_SB|wx.LB_SINGLE)
+        sizerV3A.Add(availModList, 1, flag=c)
+        sizerH3.Add(sizerV3A, 0)
+        sizerV3B = wx.BoxSizer(wx.VERTICAL)
+        mrBtn = wx.Button(self, -1, ">>")
+        mrBtn.Bind(wx.EVT_BUTTON, self.OnMoveRight)
+        sizerV3B.Add(mrBtn, 0, flag=c)
+        mlBtn = wx.Button(self, -1, "<<")
+        mlBtn.Bind(wx.EVT_BUTTON, self.OnMoveLeft)
+        sizerV3B.Add(mlBtn, 0, flag=c)
+        sizerH3.Add(sizerV3B, 1, flag=wx.ALIGN_CENTER_VERTICAL)
+        sizerV3C = wx.BoxSizer(wx.VERTICAL)
+        st = wx.StaticText(self, -1, "Imported Mods")
+        sizerV3C.Add(st, 0, flag=c)
+        importModList = wx.ListBox(self, -1, pos=wx.DefaultPosition, \
+                                  size=(120,120), choices="", style=wx.LB_ALWAYS_SB|wx.LB_SINGLE)
+        sizerV3C.Add(importModList, 1, flag=c)
+        sizerH3.Add(sizerV3C, 2)
+        sizerV2.Add(sizerH3, 0)
+        
         # TOPOLOGY
 
         self.topologyBoxTitle = wx.StaticBox(self, -1, "Topology")
@@ -5763,10 +5350,13 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         sizerG2B.Add(cm, (0, 1), flag=cv)
 
         sizerG2B.Add(wx.StaticText(self, -1,  "Interface" ), (1, 0), flag=cvl)
-        CBoptions = ('0-Old', 'LPT to CB', \
-                     'USB to CB', 'RPi to CB', 'BBB to CB') # JGH 1/16/14
-
-        s = p.get("CBoption", CBoptions[2])
+        
+        if isWin:
+            CBoptions = ['LPT', 'USB', 'RPI', 'BBB']
+            s = p.get("CBopt", CBoptions[1])
+        else:
+            CBoptions = ['USB', 'RPI', 'BBB'] # JGH 1/16/14
+            s = p.get("CBopt", CBoptions[0])
         cm = wx.ComboBox(self, -1, s, (0, 0), cwsz, choices=CBoptions, style=wx.CB_READONLY)
         cm.Enable(True)
         sizerG2B.Add(cm, (1, 1), flag=cv)
@@ -5786,37 +5376,22 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
             self.Center()
 
     #--------------------------------------------------------------------------
- 
-    #--------------------------------------------------------------------------
-##    def autoSwitchRBW(self, event):  # JGH added this method
-##        sender = event.GetEventObject()
-##        p = self.frame.prefs
-##        p.SwRBW = sender.GetValue()
-####        print ("p.SwRBW:   " + str(p.SwRBW))
-##
-##    def autoSwitchVideo(self, event):  # JGH added this method
-##        sender = event.GetEventObject()
-##        p = self.frame.prefs
-##        p.SwVideo = sender.GetValue()
-####        print ("p.SwVideo:   " + str(p.SwVideo))
-##
-##    def autoSwitchBand(self, event):  # JGH added this method
-##        sender = event.GetEventObject()
-##        p = self.frame.prefs
-##        p.SwBand = sender.GetValue()
-####        print ("p.SwBand:   " + str(p.SwBand))
-##
-##    def autoSwitchTR(self, event):  # JGH added this method
-##        sender = event.GetEventObject()
-##        p = self.frame.prefs
-##        p.SwTR = sender.GetValue()
-####        print ("p.SwTR:   " + str(p.SwTR))
-##
-##    def autoSwitchFR(self, event):  # JGH added this method
-##        sender = event.GetEventObject()
-##        p = self.frame.prefs
-##        p.SwFR = sender.GetValue()
-####        print ("p.SwFR:   " + str(p.SwFR))
+    # Module directory
+    def CreateModDir(self):
+    
+        directory = os.path.join(appdir, "MSA_Mods")
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        return directory
+
+    def OnMoveRight(self, event=None):
+        pass
+
+    def OnMoveLeft(self, event=None):
+        pass
+
+    def OnModOK(self, event=None):
+        pass
 
     #--------------------------------------------------------------------------
     # Present Help dialog.
@@ -6078,7 +5653,7 @@ class CalManDialog(wx.Dialog):
         if self.dirty:
             if self.SaveIfAllowed(self) == wx.ID_CANCEL:
                 return
-        lc = self.filesListCtrl
+        #lc = self.filesListCtrl
         i = self.pathNum
         tc = self.editBox
         fout = StringIO("")
@@ -6887,6 +6462,7 @@ class SweepDialog(wx.Dialog):
                 self.OnClose)
             frame.closeMenuItem.Enable(True)
         else:
+            # TODO: Needs clarification of its purpose
             accTbl = wx.AcceleratorTable([(wx.ACCEL_CTRL, ord('W'),
                                         wx.ID_CLOSE)])
             self.SetAcceleratorTable(accTbl)
@@ -6920,14 +6496,6 @@ class SweepDialog(wx.Dialog):
         # JGH: Get Video switch bits  (= vFilterSelIndex)
         self.vFilterSelName = p.vFilterSelName = self.videoFiltCM.GetValue()
         self.vFilterSelIndex = p.vFilterSelIndex = msa.vFilterNames.index(p.vFilterSelName)
-
-        self.switchBand = p.get("switchBand", 1)
-
-        self.switchTR = p.get("switchTR", 0)
-
-        self.switchFR = p.get("switchFR", 0)
-
-        self.switchPulse = p.get("switchPulse", 0)
 
         self.graphAppearCM.SetValue(p.get("graphAppear", "Light"))
 
@@ -7070,28 +6638,6 @@ class SweepDialog(wx.Dialog):
         self.AdjFreqTextBoxes(final=True)
         self.sizerH.Fit(self)
 
-#--------------------------------------------------------------------------
-
-    def SwitchLatchBits(self, vFilterSelIndex, switchFR, switchTR, switchPulse):
-        # JGH not implemented yet, for reference only so far
-        if debug:
-            print (">>>>6760<<<< Set Port 4 on the SLIM Control Board")
-        # Video Switches: 00 Wide, 01 Medium, 10 Narrow, 11 XNarrow
-        #bit 0  VS0 Video Filter Address, low order bit
-        #bit 1  VS1                       high order bit
-        #bit 2  A0 RBW Final Filter, low order bit
-        #bit 3  A1 RBW Final Filter, high order bit
-        #bit 4  FR  DUT Direct, Fwd (0), Rev (1)
-        #bit 5  TR  VNA Select, Trans (0), Refl (1)
-        #bit 6  Band seelction 0 for band 2, 1 for bands 1 and 3
-        #bit 7  PS  Latch Pulse start (for all latching relays, adjustable)
-        #           Normally high, pulsed low (2-200 ms) to trigger relay latching.
-
-        SwitchLatchBits = vFilterSelIndex + 4 * self.switchRBW + 16 * self.switchFR + \
-                          32 * self.switchTR + 64 * self.switchBand + 128 * self.switchPulse
-        if debug:
-            print (">>>>7169<<<< SwitchLatchBits: " + str(SwitchLatchBits) + " <<<<<")
-
         #--------------------------------------------------------------------------
 
     def configAutoWait(self, event):  # JGH added this method
@@ -7128,11 +6674,11 @@ class SweepDialog(wx.Dialog):
         sender = event.GetEventObject()
         p = self.frame.prefs
         p.DUTfwdrev = sender.GetValue()
-        # if sender.GetValue() == fwd on:
-            # set the bits for fwd (=0)
-            # else set the bits for rev (=1)
-        pass
-
+        if sender.GetValue() == 0:  # Forward
+            p.switchFR = 0
+        else:
+            p.switchFR = 1  # Reverse
+ 
     #--------------------------------------------------------------------------
     # One Scan pressed- apply before scanning.
 
@@ -7201,12 +6747,12 @@ class SweepDialog(wx.Dialog):
         (msa.finalfreq, msa.finalbw) = p.RBWFilters[p.indexRBWSel]
         p.rbw = msa.finalbw # JGH added
         p.switchRBW = p.indexRBWSel
-        msa.bitsRBW = self.bitsRBW = 4 * p.switchRBW
-        if debug: # JGH Same prints, different location. Will be removed
-            print (">>>6965<<< p.RBWFilters[p.indexRBWSel]: ", \
-                   p.RBWFilters[p.indexRBWSel])
-            print (">>> 6967 <<<< p.rbw: ", p.rbw)
-            print (">>>6968<<< bitsRBW: ", msa.bitsRBW)
+##        msa.bitsRBW = self.bitsRBW = 4 * p.switchRBW
+##        if debug: # JGH Same prints, different location. Will be removed
+##            print (">>>6965<<< p.RBWFilters[p.indexRBWSel]: ", \
+##                   p.RBWFilters[p.indexRBWSel])
+##            print (">>> 6967 <<<< p.rbw: ", p.rbw)
+##            print (">>>6968<<< bitsRBW: ", msa.bitsRBW)
 
         self.calculateWait
 
@@ -7216,17 +6762,17 @@ class SweepDialog(wx.Dialog):
 
         p.vFilterSelIndex = self.vFilterSelIndex
         p.vFilterSelName = self.vFilterSelName
-        msa.bitsVideo = self.bitsVideo = 1 * p.vFilterSelIndex
-        if debug:
-            print (">>>7205<<< bitsVideo: ", msa.bitsVideo)
-
-        msa.bitsBand = 64 * self.switchBand
-
-        msa.bitsFR = 16 * self.switchFR
-
-        msa.bitsTR = 32 * self.switchTR
-
-        msa.bitsPulse = 128 * self.switchPulse
+##        msa.bitsVideo = self.bitsVideo = 1 * p.vFilterSelIndex
+##        if debug:
+##            print (">>>7205<<< bitsVideo: ", msa.bitsVideo)
+##
+##        msa.bitsBand = 64 * self.switchBand
+##
+##        msa.bitsFR = 16 * self.switchFR
+##
+##        msa.bitsTR = 32 * self.switchTR
+##
+##        msa.bitsPulse = 128 * self.switchPulse
 
         p.graphAppear = self.graphAppearCM.GetValue()
         p.theme = (DarkTheme, LightTheme)[p.graphAppear == "Light"]
@@ -7282,8 +6828,8 @@ class SweepDialog(wx.Dialog):
             p.sweepDir = 2
 
         frame.StopScanAndWait()
-        cb.SetP(4, msa.bitsVideo + msa.bitsRBW + msa.bitsFR +
-                msa.bitsTR + msa.bitsBand + msa.bitsPulse)
+##        cb.SetP(4, msa.bitsVideo + msa.bitsRBW + msa.bitsFR +
+##                msa.bitsTR + msa.bitsBand + msa.bitsPulse)
 
         msa.NewScanSettings(p)
         frame.spectrum = None
@@ -8187,9 +7733,9 @@ class FilterAnalDialog(FunctionDialog):
     def __init__(self, frame):
         FunctionDialog.__init__(self, frame, "Analyze Filter", "filtAn")
         # JGH 2/10/14 Next 3 lines: vars not used
-#        p = frame.prefs
-#        markers = frame.specP.markers
-#        self.sizerV = sizerV = wx.BoxSizer(wx.VERTICAL)
+##        p = frame.prefs
+##        markers = frame.specP.markers
+##        self.sizerV = sizerV = wx.BoxSizer(wx.VERTICAL)
         c = wx.ALIGN_CENTER
         chb = wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_BOTTOM
 
@@ -8248,8 +7794,8 @@ class FilterAnalDialog(FunctionDialog):
         isLogF = p.isLogF
 
         if self.enableCB.IsChecked():
-            #global prt
-            #prt = True
+            # global prt
+            # prt = True
             # enabled: set up markers for analysis
             peakName = self.peakMarkCB.GetValue()
             # print ("Analyzing filter -- peak is", peakName)
@@ -10373,9 +9919,6 @@ class MSASpectrumFrame(wx.Frame):
             ("Markers L,R bounded by P+", "SetMarkers_LRbyPp", -2),
             ("Markers L,R bounded by P-", "SetMarkers_LRbyPm", -2),
             ("Reference Lines -->",       None, 8)] +
-##            ("-",                       None, -1)] +
-##            [("Set Reference Line %d...\tCTRL-%d" % (i, i), "SetRef", 600+i)
-##                for i in range(8)]
             [("Set Reference Line %d...\tCTRL-%d" % (i, i), "SetRef", -1)
                 for i in range(8)]
         )
@@ -10503,13 +10046,12 @@ class MSASpectrumFrame(wx.Frame):
 
         # create a log text panel below and set it to log all output
         # (can't use LogTextCtrl-- it's broken)
-        logP = wx.TextCtrl(self.logSplitter, style=wx.TE_MULTILINE|wx.TE_READONLY)
-##        logP.SetBackgroundColour("sky blue")
+        logP = wx.TextCtrl(self.logSplitter, \
+                           style=wx.TE_MULTILINE|wx.TE_READONLY)
         logP.SetFont(wx.Font(fontSize, wx.MODERN, wx.NORMAL, wx.NORMAL))
         self.logP = logP
         lsVdim = int(p.get("logSplit", 0.8 * self.fVdim)) # On start
         self.logSplitter.SplitHorizontally(mainP, logP, lsVdim) # JGH 2/16/14
-##        self.logSplitter.SplitHorizontally(mainP, logP, p.get("logSplit", 450))
         self.logSplitter.name = "log"
         self.Bind(wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashChanged)
        
@@ -10528,7 +10070,7 @@ class MSASpectrumFrame(wx.Frame):
         msaGlobal.SetMsa(msa)
 
         # initialize back end
-        p.get("rbw", 150)
+        p.get("rbw", 300)
         p.get("wait", 10)
         p.get("sigGenFreq", 10.)
         p.get("tgOffset", 0.)
@@ -10544,6 +10086,7 @@ class MSASpectrumFrame(wx.Frame):
         p.get("atten5", False)
         p.get("stepAttenDB", 0)
         p.get("switchPulse", 0) # JGH added Oct23
+        p.get("cftest", 0)
 
         # initialize spectrum graph
         va0 = p.get("va0", -120.)
@@ -10627,7 +10170,7 @@ class MSASpectrumFrame(wx.Frame):
             dlg = DDSTests(self)
             dlg.Show()
         # Start EON Jan 22, 2014
-        # Define functions available to each mode:
+        # Define functions available at the menu to each mode:
         self.funcModeList = [0] * 4
         self.funcModeList[MSA.MODE_SA] = ["filter","step"]
         self.funcModeList[MSA.MODE_SATG] = ["filter","component","step"]
@@ -11169,68 +10712,32 @@ class MSASpectrumFrame(wx.Frame):
             # TOPOLOGY
             p.ADCtype = dlg.ADCoptCM.GetValue()
 
-            p.CBoption = CBopt = dlg.CBoptCM.GetValue()
-            if CBopt == "RPI to CB": # JGH RaspberryPi does this
-                cb = MSA_RPI()
-            elif CBopt == "BBB to CB": # JGH BeagleBone does this
-                cb =MSA_BBB()
-            elif CBopt == "LPT to CB": # JGH Only Windows does this
-                if (isWin == False):
-                    text = "You must be running WINDOWS to use this option"
-                    dlg.MessageBoxMessage = text
-                    diag = wx.MessageDialog(None, text , "Topology: Control Brd", \
-                                           wx.ID_OK)
-                    retCode = diag.ShowModal()
-                    if (retCode == wx.ID_OK):
-                        diag.Destroy()
-                        return
-                # JGH 2/10/14
-                if (isWin == True):
-                    #elif isWin and winUsesParallelPort:
-
-                    winUsesParallelPort = True
-                    # Windows DLL for accessing parallel port
-                    from ctypes import windll
-                    try:
-                        windll.LoadLibrary(os.path.join(resdir, "inpout32.dll"))
-                    except WindowsError:
-                        # Start up an application just to show error dialog
-                        app = wx.App(redirect=False)
-                        app.MainLoop()
-                        dlg = ScrolledMessageDialog(None,
-                                        "\n  inpout32.dll not found", "Error")
-                        dlg.ShowModal()
-                        sys.exit(-1)
+            p.CBopt = CBopt = dlg.CBoptCM.GetValue()
+            
+            if CBopt == "LPT": # JGH Only Windows does this
+                p.winLPT = winUsesParallelPort = True
+                # Windows DLL for accessing parallel port
+                from ctypes import windll
+                try:
+                    windll.LoadLibrary(os.path.join(resdir, "inpout32.dll"))
                     cb = MSA_CB_PC()
-            elif CBopt == "USB to CB": # JGH Windows, Linux and OSX do this
+                except WindowsError:
+                    # Start up an application just to show error dialog
+                    app = wx.App(redirect=False)
+                    app.MainLoop()
+                    dlg = ScrolledMessageDialog(None,
+                                    "\n  inpout32.dll not found", "Error")
+                    dlg.ShowModal()
+                    sys.exit(-1)
+
+            elif CBopt == "USB": # JGH Windows, Linux and OSX do this
                 cb = MSA_CB_USB()
-                if isLinux:
-                    import usb
-                else:
-                    # OSX: tell ctypes that the libusb backend is located in the Frameworks directory
-                    fwdir = os.path.normpath(resdir + "/../Frameworks")
-                    print ("fwdir :    " + str(fwdir))
-                    if os.path.exists(fwdir):
-                        os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = fwdir
-                    import usb
+            elif CBopt == "RPI": # JGH RaspberryPi does this
+                cb = MSA_RPI()
+            elif CBopt == "BBB": # JGH BeagleBone does this
+                cb =MSA_BBB()
             else:
                 pass
-
-##            # Auto Switches
-##            # JGH ends 1/14/14
-##
-##            self.SwRBW = p.SwRBW
-##            self.SwVideo = p.SwVideo
-##            self.SwBand = p.SwBand
-##            self.SwTR = p.SwTR
-##            self.SwFR = p.SwFR
-##
-##            if debug:
-##                print ("SwRBW = " + str(self.SwRBW))
-##                print ("SwVideo = " + str(self.SwVideo))
-##                print ("SwBand = " + str(self.SwBand))
-##                print ("SwTR = " + str(self.SwTR))
-##                print ("SwFR = " + str(self.SwFR))
 
             # JGH end of additions
 
@@ -11405,11 +10912,11 @@ class MSASpectrumFrame(wx.Frame):
     # Open the Synthetic DUT dialog box.
 
     def SynDUT(self, event=None): # JGH 2/8/14 syndutHook7
-        global hardwarePresent, cb
+        global hardwarePresent, cb, msa
         if not msa.syndut:
             cb = MSA_CB()
             hardwarePresent = False
-##            import syndut    # JGH 2/8/14
+            from synDUT import SynDUTDialog
             msa.syndut = SynDUTDialog(self)
         else:
             msa.syndut.Raise()
@@ -11851,22 +11358,26 @@ class MSASpectrumFrame(wx.Frame):
     # Set the main operating mode.
 
     def SetMode_SA(self, event):
+        p = self.prefs
+        p.switchSG = 0   # JGH: Switch not implemented in software
         self.SetMode(msa.MODE_SA)
 
     def SetMode_SATG(self, event):
+        p = self.prefs
+        p.switchSG = 1   # JGH: Switch not implemented in software
         self.SetMode(msa.MODE_SATG)
 
     def SetMode_VNATran(self, event):
         # Start EON Jan 22, 2014
-##        p = self.prefs
-##        p.switchTR = 0   # JGH 11/25/13
+        p = self.prefs
+        p.switchTR = 0   # JGH 11/25/13
         # End EON Jan 22, 2014
         self.SetMode(msa.MODE_VNATran)
 
     def SetMode_VNARefl(self, event):
         # Start EON Jan 22, 2014
-##        p = self.prefs
-##        p.switchTR = 1   # JGH 11/25/13
+        p = self.prefs
+        p.switchTR = 1   # JGH 11/25/13
         # End EON Jan 22, 2014
         self.SetMode(msa.MODE_VNARefl)
 
@@ -11905,17 +11416,17 @@ class MSASpectrumFrame(wx.Frame):
     # Initializes menu bar based on mode
     def InitMode(self,mode):
         p = self.prefs
-        if mode == msa.MODE_VNATran:
-            p.switchTR = 0   # JGH 11/25/13
-        if mode == msa.MODE_VNARefl:
-            p.switchTR = 1   # JGH 11/25/13
+##        if mode == msa.MODE_VNATran:
+##            p.switchTR = 0   # JGH 11/25/13
+##        if mode == msa.MODE_VNARefl:
+##            p.switchTR = 1   # JGH 11/25/13
 
         p.calLevel = msa.calLevel = 0
 
         menuBar = self.MenuBar
         i = menuBar.FindMenu("Functions")
         funcMenu = menuBar.GetMenu(i)
-##        items = funcMenu.GetMenuItems()	# JGH These 2 used only here, no need to rename
+##        items = funcMenu.GetMenuItems()    # JGH These 2 used only here, no need to rename
 ##        funcList = self.funcModeList[mode]
         skip = True
 ##        for m in items:
@@ -11960,8 +11471,8 @@ class MSASpectrumFrame(wx.Frame):
         setattr(self.prefs, sashWin.name + "Split", sashWin.GetSashPosition())
         event.Skip()
 
-#--------------------------------------------------------------------------
-# Hide/ reveal message panel
+    #--------------------------------------------------------------------------
+    # Hide/ reveal message panel
 
     def logPshow(self, event):
         p = self.prefs
@@ -12011,12 +11522,6 @@ class MSASpectrumFrame(wx.Frame):
         self.SavePrefs()
         print ("Exiting2")
         self.Destroy()
-
-if showThreadProfile:
-    #import yappi    # JGH 2/10/14, requires yappi-0.82.tar.gz
-    pass
-elif showProfile:
-    import cProfile
 
 #==============================================================================
     # CAVITY FILTER TEST # JGH 1/26/14
@@ -12123,14 +11628,16 @@ if __name__ == "__main__":
     try:
         app = MSAApp(redirect=False)
         if showThreadProfile:
+            #import yappi    # JGH 2/10/14, requires yappi-0.82.tar.gz
             # profile code (both threads) and write results
             #yappi.start(builtins=True)
             app.MainLoop()
             #yappi.stop()
             f = open("msa.profile", "w")
-            #yappi.print_all()
+            #yappi.print_stats(f, yappi.SORTTYPE_TSUB)
             f.close()
         elif showProfile:
+            import cProfile
             # profile code (main thread only) and write results
             cProfile.run("app.MainLoop()", "msa.profile")
             # To see the stats, do:
