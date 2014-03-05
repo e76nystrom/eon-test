@@ -1,8 +1,5 @@
+import cmath, re, time, wx
 import copy as dcopy
-import cmath
-import re
-import time
-import wx
 from coax import Coax
 from numpy import array, cos, interp, pi, sin, tan, zeros
 from msapy import calWait

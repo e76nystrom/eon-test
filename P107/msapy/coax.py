@@ -1,15 +1,11 @@
-import cmath
-import os
-import numpy
-import re
-import wx
+import cmath, numpy, os, re, wx
 from math import sqrt
 from numpy import pi
+from oslCal import polarDbDeg
 from msapy import floatSI
 from msapy import FunctionDialog
 from msapy import Marker
 from msapy import message
-from msapy import polarDbDeg
 
 constMaxValue = 1e12
 

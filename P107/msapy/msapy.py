@@ -1124,7 +1124,7 @@ class MSA_LO:
         if debug:
             print ("XXXXX 996, ResetDDSserSLIM XXXXX")
         pdmcmd = msa.invPhase << cb.P2_pdminvbit
-        bitsRBW = msa.bitsRBW
+        #bitsRBW = msa.bitsRBW
 
         # (reset DDS1 to parallel) WCLK up, WCLK up and FQUD up, WCLK up and
         # FQUD down, WCLK down
@@ -1176,7 +1176,7 @@ class MSA_LO:
 ##        # leaving bitsRBW latched
 ##        cb.SetP(1, a)
 
-        a = 0
+        #a = 0
         for i in range(40):
             # data with clock low
             cb.SetP(1, 0)
@@ -7606,7 +7606,7 @@ class CtlBrdTests(wx.Dialog):
         self.mode = None
         self.modeCtrls = []
         self.prefs = p = frame.prefs
-        framePos = frame.GetPosition() # JGH (framePos not used)
+        #framePos = frame.GetPosition() # JGH (framePos not used)
         pos = p.get("ctlBrdWinPos", wx.DefaultPosition)
         wx.Dialog.__init__(self, frame, -1, "Control Board Tests", pos,
                            wx.DefaultSize, wx.DEFAULT_DIALOG_STYLE)
@@ -7726,12 +7726,12 @@ class MSASpectrumFrame(wx.Frame):
 
         # get preference values, using defaults if new
         p = self.prefs
-        fStart = p.get("fStart", -1.5)
-        fStop = p.get("fStop", 1.5)
-        nSteps = p.get("nSteps", 400)
+        p.get("fStart", -1.5)
+        p.get("fStop", 1.5)
+        p.get("nSteps", 400)
         self.markMHz = 0.
         self.fHdim = fHdim = 800 ; self.fVdim = fVdim = 600 # JGH 2/16/14
-        fHdim = 800 ; fVdim = 600
+        #fHdim = 800 ; fVdim = 600
         wx.Frame.__init__(self, parent, -1, title,
                             size=p.get("frameSize", (fHdim, fVdim)))
         self.Bind(wx.EVT_SIZE, self.OnSizeChanged)
@@ -8101,9 +8101,10 @@ class MSASpectrumFrame(wx.Frame):
                     item.Enable(False)
         self.menubar.Append(menu, name)
         return menu
+    
     #--------------------------------------------------------------------------
     # derived from Menuitem class
-    def SubMenu(self, parentMenu, menuId, text, help, kind, subMenu):
+    def SubMenu(self, parentMenu, menuId, text, menuHelp, kind, subMenu):
         pass
 
     #--------------------------------------------------------------------------
@@ -8390,8 +8391,8 @@ class MSASpectrumFrame(wx.Frame):
         LogGUIEvent("DrawTraces: %d steps" % len(spec.Sdb))
 
         # compute derived data used by various data types
-        spec.f = f = spec.Fmhz
-        nSteps = len(f) - 1 # JGH (unused var nSteps)
+        spec.f = spec.Fmhz
+        #nSteps = len(f) - 1 # JGH (unused var nSteps)
         mode = p.mode
         includePhase = mode >= MSA.MODE_VNATran
 
@@ -8567,7 +8568,7 @@ class MSASpectrumFrame(wx.Frame):
             gv = dlg.gridVF
             vFilterCaps = []
             for row in range(4):
-                Label = gv.GetRowLabelValue(row)
+                #Label = gv.GetRowLabelValue(row)
                 uFcap = float(gv.GetCellValue(row,0)) # JGH 2/15/14
                 vFilterCaps.append(uFcap)
             p.vFilterCaps = vFilterCaps

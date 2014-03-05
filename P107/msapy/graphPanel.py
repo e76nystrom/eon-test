@@ -314,7 +314,7 @@ class GraphPanel(wx.Panel):
             # ------ GRID ------
 
             # draw legend
-            ntr = len(self.traces)
+            #ntr = len(self.traces)
             y = y0 + 150
             x = x1 + 50
             for name, tr in sorted(self.traces.iteritems(), \
