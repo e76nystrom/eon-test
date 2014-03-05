@@ -1,7 +1,7 @@
 print (__name__)
 
 import sys, traceback
-import msapyP109
+import msapy
 
 debug = False
 showProfile = 0     # set to 1 to generate msa.profile. Then run showprof.py.
@@ -34,8 +34,8 @@ else:
 
 if __name__ == "__main__":
     try:
-        app = msapyP109.MSAApp(redirect=False)
-        msapyP109.debug = debug
+        app = msapy.MSAApp(redirect=False)
+        msapy.debug = debug
         if showThreadProfile:
             #import yappi    # JGH 2/10/14, requires yappi-0.82.tar.gz
             # profile code (both threads) and write results

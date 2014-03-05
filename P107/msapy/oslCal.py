@@ -4,18 +4,12 @@ import re
 import time
 import wx
 from coax import Coax
-from math import cos
-from math import sin
-from math import tan
-from numpy import array
-from numpy import interp
-from numpy import pi
-from numpy import zeros
-from msapyP109 import calWait
-from msapyP109 import floatSI
-from msapyP109 import message
-from msapyP109 import Spectrum
-from msapyP109 import version
+from numpy import array, cos, interp, pi, sin, tan, zeros
+from msapy import calWait
+from msapy import floatSI
+from msapy import message
+from msapy import Spectrum
+from msapy import version
 
 RadsPerDegree = pi / 180
 DegreesPerRad = 180 / pi

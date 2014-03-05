@@ -1,9 +1,9 @@
 import msaGlobal
 import wx
-from msapyP109 import FunctionDialog
-from msapyP109 import MSA
-from msapyP109 import floatOrEmpty
-from msapyP109 import Ref
+from msapy import FunctionDialog
+from msapy import MSA
+from msapy import floatOrEmpty
+from msapy import Ref
 
 #=============================================================================
 # The Step Attenuator dialog box.

@@ -1,11 +1,11 @@
 import wx
 from math import atan2
 from numpy import arange, angle, interp, log10, nan_to_num, pi, sqrt, tan
-from msapyP109 import debug
-from msapyP109 import isLinux
-from msapyP109 import LogGUIEvent
-from msapyP109 import fontSize
-from msapyP109 import si
+from msapy import debug
+from msapy import isLinux
+from msapy import LogGUIEvent
+from msapy import fontSize
+from msapy import si
 
 #==============================================================================
 # A Smith chart window for Reflectance mode.

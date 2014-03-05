@@ -1,31 +1,24 @@
 import msaGlobal
 import random
 import wx
-from numpy import cos
-from numpy import sin
-from numpy import sqrt
-from numpy import angle, arange, exp
-from numpy import interp
-from numpy import log10, logspace, linspace
-from numpy import poly1d
-from numpy import pi
-from numpy import zeros, zeros_like
+from numpy import angle, arange, cos, exp
+from numpy import interp, log10, logspace, linspace
+from numpy import pi, poly1d, sin, sqrt, zeros, zeros_like
 from numpy.fft import fft
-from msapyP109 import Ohms
-from msapyP109 import db
-from msapyP109 import floatOrEmpty
-from msapyP109 import si
-from msapyP109 import SI_ASCII
-from msapyP109 import isMac
-from msapyP109 import floatSI
-from msapyP109 import MSA
-from msapyP109 import par2, par3
-from msapyP109 import EquivS11FromS21
-from msapyP109 import modDegree
-from msapyP109 import kHz, GHz, MHz
-from msapyP109 import mH, pH, fF, pF
+from msapy import Ohms
+from msapy import db
+from msapy import floatOrEmpty
+from msapy import si
+from msapy import SI_ASCII
+from msapy import isMac
+from msapy import floatSI
+from msapy import MSA
+from msapy import par2, par3
+from msapy import EquivS11FromS21
+from msapy import modDegree
+from msapy import kHz, GHz, MHz
+from msapy import mH, pH, fF, pF
 
-msa = None
 debug = False        # set True to write debugging messages to msapy.log
 
 #==============================================================================

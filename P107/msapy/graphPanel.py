@@ -2,17 +2,17 @@ import msaGlobal
 import re, string, time, wx
 import wx.lib.colourselect as csel
 from numpy import array, clip, concatenate, floor, log10, nan_to_num
-from msapyP109 import version
-from msapyP109 import red, blue
-from msapyP109 import MSA
-from msapyP109 import VScale
-from msapyP109 import LogGUIEvent
-from msapyP109 import fontSize
-from msapyP109 import StdScale
-from msapyP109 import MHz, ns
-from msapyP109 import si
-from msapyP109 import Marker
-from msapyP109 import SI_NO
+from msapy import version
+from msapy import red, blue
+from msapy import MSA
+from msapy import VScale
+from msapy import LogGUIEvent
+from msapy import fontSize
+from msapy import StdScale
+from msapy import MHz, ns
+from msapy import si
+from msapy import Marker
+from msapy import SI_NO
 
 #==============================================================================
 # A graph of a set of traces.

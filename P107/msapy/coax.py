@@ -5,11 +5,11 @@ import re
 import wx
 from math import sqrt
 from numpy import pi
-from msapyP109 import floatSI
-from msapyP109 import FunctionDialog
-from msapyP109 import Marker
-from msapyP109 import message
-from msapyP109 import polarDbDeg
+from msapy import floatSI
+from msapy import FunctionDialog
+from msapy import Marker
+from msapy import message
+from msapy import polarDbDeg
 
 constMaxValue = 1e12
 
