@@ -2,26 +2,18 @@ from msaGlobal import GetMsa, GetVersion, SetModuleVersion
 import cmath, os, re, time, wx
 import copy as dcopy
 from coax import Coax
-from math import log10
 from numpy import array, cos, interp, pi, sin, tan, zeros
-from util import constMaxValue, floatOrEmpty, floatSI, message, polarDbDeg
+from util import constMaxValue, DegreesPerRad, floatOrEmpty, floatSI, message, \
+    polarDbDeg, RadsPerDegree, uSafeLog10
 from msa import MSA
 from functionDialog import MainDialog
 from spectrum import Spectrum
 
 SetModuleVersion(__name__,("1.0","3/6/2014"))
 
-RadsPerDegree = pi / 180
-DegreesPerRad = 180 / pi
 calWait = 50 # sweep wait during calibration # EON Jan 29, 2014
 
 # Return base 10 log of aVal; special rule for small and non-positive arguments
-
-def uSafeLog10(aVal):
-    if aVal <= 1e-20:           #0.00001^4
-        return -20
-    else:
-        return log10(aVal)
 
 def uNormalizeDegrees(deg):
     while deg <= -180:

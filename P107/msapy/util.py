@@ -29,6 +29,15 @@ def db(x):
 def modDegree(deg):
     return mod(deg + 180., 360.) - 180.
 
+RadsPerDegree = pi / 180
+DegreesPerRad = 180 / pi
+
+def uSafeLog10(aVal):
+    if aVal <= 1e-20:           #0.00001^4
+        return -20
+    else:
+        return log10(aVal)
+
 def polarDbDeg(Z):
     (mag, phase) = cmath.polar(Z)
     db = 20 * uSafeLog10(mag)
