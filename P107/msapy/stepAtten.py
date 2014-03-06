@@ -1,9 +1,11 @@
-import msaGlobal
+from msaGlobal import GetCb, GetMsa, SetModuleVersion
 import wx
-from msapy import FunctionDialog
-from msapy import MSA
-from msapy import floatOrEmpty
-from msapy import Ref
+from functionDialog import FunctionDialog
+from msa import MSA
+from util import floatOrEmpty
+from ref import Ref
+
+SetModuleVersion(__name__,("1.0","3/6/2014"))
 
 #=============================================================================
 # The Step Attenuator dialog box.
@@ -11,8 +13,8 @@ from msapy import Ref
 class StepAttenDialog(FunctionDialog):
     def __init__(self, frame):
         global msa, cb
-        msa = msaGlobal.GetMsa()
-        cb = msaGlobal.GetCb()
+        msa = GetMsa()
+        cb = GetCb()
         FunctionDialog.__init__(self, frame, "Step Attenuator", "stepAtten")
         p = frame.prefs
         self.sizerV = sizerV = wx.BoxSizer(wx.VERTICAL)
@@ -141,8 +143,8 @@ class StepAttenDialog(FunctionDialog):
 
 def SetStepAttenuator(value):
     global msa, cb
-    msa = msaGlobal.GetMsa()
-    cb = msaGlobal.GetCb()
+    msa = GetMsa()
+    cb = GetCb()
     band = msa._GHzBand
     msa._SetFreqBand(band)
     # each attenuator value is 0-31 in 0.5-dB increments

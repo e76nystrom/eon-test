@@ -1,7 +1,8 @@
-print (__name__)
-
+from msaGlobal import SetModuleVersion
 import sys, traceback
 import msapy
+
+SetModuleVersion("msaRun",("1.0","3/6/2014"))
 
 debug = False
 showProfile = 0     # set to 1 to generate msa.profile. Then run showprof.py.

@@ -1,14 +1,16 @@
+from msaGlobal import incremental, SetModuleVersion
 import copy as dcopy
 from numpy import append, convolve, diff, exp, log10
 from numpy import  nan_to_num, pi, seterr, sqrt, zeros
-from msapy import mW, MHz, uF, uH
-from msapy import MSA
-from msapy import incremental
-from msapy import truncateS11ToUnity
-from msapy import min2
-from msapy import EquivS11FromS21
-from msapy import angle
-from msapy import db
+from util import mW, MHz, uF, uH
+from util import truncateS11ToUnity
+from util import min2
+from util import EquivS11FromS21
+from util import angle
+from util import db
+from msa import MSA
+
+SetModuleVersion(__name__,("1.0","3/6/2014"))
 
 msa = None
 
@@ -40,7 +42,6 @@ class Trace:
             self.LFmhz = log10(spec.Fmhz)
         except FloatingPointError:
             self.LFmhz = spec.Fmhz
-
 
     # Return the data index for a given frequency in MHz.
     # Optionally returns the index base frequency f0 and spacing df.

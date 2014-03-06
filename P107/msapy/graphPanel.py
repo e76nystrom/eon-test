@@ -1,18 +1,15 @@
-import msaGlobal
+from msaGlobal import GetFontSize, GetMsa, GetVersion, SetModuleVersion
 import re, string, time, wx
 import wx.lib.colourselect as csel
 from numpy import array, clip, concatenate, floor, log10, nan_to_num
-from msapy import version
-from msapy import red, blue
-from msapy import MSA
-from msapy import VScale
-from msapy import LogGUIEvent
-from msapy import fontSize
-from msapy import StdScale
-from msapy import MHz, ns
-from msapy import si
-from msapy import Marker
-from msapy import SI_NO
+from vScale import VScale
+from events import LogGUIEvent
+from theme import red, blue
+from msa import MSA
+from marker import Marker
+from util import MHz, ns, si, SI_NO,StdScale
+
+SetModuleVersion(__name__,("1.0","3/6/2014"))
 
 #==============================================================================
 # A graph of a set of traces.
@@ -63,8 +60,9 @@ class GraphPanel(wx.Panel):
         # Start EON Jan 12 2014
         if not self.bind:
             self.bind = True
-            global msa
-            msa = msaGlobal.GetMsa()
+            global msa, fontSize
+            msa = GetMsa()
+            fontSize = GetFontSize()
             self.Bind(wx.EVT_PAINT,        self.OnPaint)
             self.Bind(wx.EVT_MOUSE_EVENTS, self.OnMouse)
             self.Bind(wx.EVT_KEY_DOWN,     self.OnKeyDown)
@@ -100,7 +98,7 @@ class GraphPanel(wx.Panel):
         pass
 
     def OnPaint(self, event):
-        global msa
+        global msa, fontSize
         LogGUIEvent("OnPaint")
         ##assert wx.Thread_IsMain()
 
@@ -285,7 +283,8 @@ class GraphPanel(wx.Panel):
                 dva = dv
                 if vaUnits:
                     vaBase = vBase
-                    if trB:
+                    #if trB:
+                    if vbUnits:
                         den = max(va1 - va0, 1e-20)
                         dvb = max(dv * (vb1 - vb0) / den,1e-20)
                         self.dyb = dyb = yPixDiv / dvb
@@ -295,7 +294,8 @@ class GraphPanel(wx.Panel):
                 dvb = dv
                 if vbUnits:
                     vaBase = vBase
-                    if trB:
+                    #if trB:
+                    if vaUnits:
                         den = max(vb1 - vb0, 1e-20)
                         dva = max(dv * (va1 - va0) / den,1e-20)
                         self.dya = dya = yPixDiv / dva
@@ -480,7 +480,7 @@ class GraphPanel(wx.Panel):
                     fixName = "Shunt"
                 dc.DrawText("Fixture=%s" % fixName, xinfo, yinfo + y*dyText)
                 y += 1
-            dc.DrawText("Vers %s" % version, xinfo, yinfo + y*dyText)
+            dc.DrawText("Vers %s" % GetVersion, xinfo, yinfo + y*dyText)
             y += 1
 
             # draw optional results text box

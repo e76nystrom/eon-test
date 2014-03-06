@@ -1,6 +1,9 @@
+from msaGlobal import, SetModuleVersion
 from collections import defaultdict
 from gc import collect, get_objects
 #import objgraph   # JGH requires python-objgraph module
+
+SetModuleVersion(__name__,("1.0","3/6/2014"))
 
 objdump = 5
 fill_before = True

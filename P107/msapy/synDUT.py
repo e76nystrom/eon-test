@@ -1,23 +1,15 @@
-import msaGlobal
-import random
-import wx
-from numpy import angle, arange, cos, exp
-from numpy import interp, log10, logspace, linspace
-from numpy import pi, poly1d, sin, sqrt, zeros, zeros_like
+from msaGlobal import GetHardwarePresent, GetMsa, isMac, SetHardwarePresent, SetModuleVersion
+import random, wx
+from numpy import angle, arange, cos, exp, \
+    interp, log10, logspace, linspace, \
+    pi, poly1d, sin, sqrt, zeros, zeros_like
 from numpy.fft import fft
-from msapy import Ohms
-from msapy import db
-from msapy import floatOrEmpty
-from msapy import si
-from msapy import SI_ASCII
-from msapy import isMac
-from msapy import floatSI
-from msapy import MSA
-from msapy import par2, par3
-from msapy import EquivS11FromS21
-from msapy import modDegree
-from msapy import kHz, GHz, MHz
-from msapy import mH, pH, fF, pF
+from msa import MSA
+from util import db, floatOrEmpty, floatSI, EquivS11FromS21, \
+    modDegree, si, SI_ASCII, \
+    fF, kHz, GHz, mH, MHz, Ohms, pF, ,pH
+
+SetModuleVersion(__name__,("1.0","3/6/2014"))
 
 debug = False        # set True to write debugging messages to msapy.log
 
@@ -28,7 +20,7 @@ debug = False        # set True to write debugging messages to msapy.log
 class SynDUTDialog(wx.Dialog):
     def __init__(self, frame):
         global msa
-        msa = msaGlobal.GetMsa()
+        msa = GetMsa()
         self.frame = frame
         self.prefs = p = frame.prefs
         framePos = frame.GetPosition()
@@ -144,7 +136,7 @@ class SynDUTDialog(wx.Dialog):
     # Save current preferences on closing.
 
     def Close(self, event=None):
-        global hardwarePresent, cb
+        global cb
         p = self.prefs
         p.syndutType = self.type
         p.syndutWinPos = self.GetPosition().Get()
@@ -160,7 +152,7 @@ class SynDUTDialog(wx.Dialog):
 
         # deselect syndut, leaving nothing for input
         msa.syndut = None
-        hardwarePresent = True
+        SetHardwarePresent(True)
         if event:
             event.Skip()
 
@@ -396,4 +388,16 @@ class SynDUTDialog(wx.Dialog):
         synSpecP = angle(synSpecVp, deg=True)
         self.synSpecP = self.AdjustPhase(self.synSpecM, synSpecP) / 360 * \
                     65536
+
+# Conditionally form a parallel circuit with elements in list.
+
+def par2(a, b, isSeries=False):
+    if isSeries:
+        return a + b
+    return (a*b) / (a+b)
+
+def par3(a, b, c, isSeries=False):
+    if isSeries:
+        return a + b + c
+    return (a*b*c) / (b*c + a*c + a*b)
 

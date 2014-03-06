@@ -1,13 +1,12 @@
+from msaGlobal import SetModuleVersion
 import cmath, numpy, os, re, wx
 from math import sqrt
 from numpy import pi
-from oslCal import polarDbDeg
-from msapy import floatSI
-from msapy import FunctionDialog
-from msapy import Marker
-from msapy import message
+from util import constMaxValue, floatSI, polarDbDeg, message
+from functionDialog import FunctionDialog
+from marker import Marker
 
-constMaxValue = 1e12
+SetModuleVersion(__name__,("1.0","3/6/2014"))
 
 #==============================================================================
 # The Coax Parameters dialog box.

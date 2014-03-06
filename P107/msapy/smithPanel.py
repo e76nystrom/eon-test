@@ -1,11 +1,13 @@
+from msaGlobal import GetFontSize, isLinux, SetModuleVersion
 import wx
 from math import atan2
 from numpy import arange, angle, interp, log10, nan_to_num, pi, sqrt, tan
-from msapy import debug
-from msapy import isLinux
-from msapy import LogGUIEvent
-from msapy import fontSize
-from msapy import si
+from util import si
+from events import LogGUIEvent
+
+SetModuleVersion(__name__,("1.0","3/6/2014"))
+
+debug = False
 
 #==============================================================================
 # A Smith chart window for Reflectance mode.
@@ -53,6 +55,8 @@ class SmithDialog(wx.Dialog):
 
 class SmithPanel(wx.Panel):
     def __init__(self, parent, frame):
+        global fontSize
+        fontSize = GetFontSize()
         self.frame = frame
         self.prefs = p = frame.prefs
 
