@@ -391,13 +391,19 @@ class MSASpectrumFrame(wx.Frame):
         # initialize spectrum graph
         va0 = p.get("va0", -120.)
         va1 = p.get("va1", 0.)
-        vb0 = p.get("vb0", -180.)
-        vb1 = p.get("vb1", 180.)
         specP.vScales = vScales = []
         vai = p.get("vaTypeIndex", 1)
-        vbi = p.get("vbTypeIndex", 2)
         vScales.append(VScale(vai, msa.mode, va1, va0, "dB"))
-        vScales.append(VScale(vbi, msa.mode, vb1, vb0, "Deg"))
+        if msa.mode < MSA.MODE_VNATran:
+            vb0 = p.get("vb0", 0)
+            vb1 = p.get("vb1", 0.)
+            vbi = p.get("vbTypeIndex", 0)
+            vScales.append(VScale(vbi, msa.mode, vb1, vb0, "None"))
+        else:
+            vb0 = p.get("vb0", -180.)
+            vb1 = p.get("vb1", 180.)
+            vbi = p.get("vbTypeIndex", 2)
+            vScales.append(VScale(vbi, msa.mode, vb1, vb0, "Deg"))
         self.refs = {}
         self.lastDoneDrawTime = 0
         self.btnScanMode = False    # True when buttons in scanning mode
@@ -420,8 +426,7 @@ class MSASpectrumFrame(wx.Frame):
         self.Bind(wx.EVT_TIMER, self.OnTimer)
         self.Bind(EVT_UPDATE_GRAPH, self.OnTimer)
         self.yLock = threading.Lock()
-        tmp = wx.Display().GetGeometry()
-        self.screenWidth = tmp[2]
+        self.screenWidth, self.screenHeight = wx.Display().GetGeometry()[2:4]
 
         # Initialize cavity filter test status # JGH 1/26/14
         self.cftest = 0
@@ -1459,57 +1464,22 @@ class MSASpectrumFrame(wx.Frame):
 
     def SetRef(self, event):
         p = self.prefs
-        refNum = event.Id - 600
-        from ref import RefDialog, Ref
+        eventId = event.Id
+        for m in self.sweepMenu.GetMenuItems():
+            if "ref" in m.GetText().lower():
+                subItems = m.GetSubMenu().GetMenuItems()
+                refNum = 0
+                for sub in subItems:
+                    if eventId == sub.GetId():
+                        break
+                    refNum += 1
+        from ref import RefDialog
         dlg = RefDialog(self, refNum)
-        if dlg.ShowModal() == wx.ID_OK:
-            mode = dlg.mode
-            if mode == 0:
-                # delete it
-                if self.refs.has_key(refNum):
-                    self.refs.pop(refNum)
-            else:
-                # create a new ref from current data
-                spec = self.spectrum
-                vScales = self.specP.vScales
-                # get the units from both vertical scales
-                bothU = [vs.dataType.units for vs in vScales]
-                print ("bothU=", bothU)
-                for i in range(2):
-                    vScale = vScales[i]
-                    # create a ref for each axis, unless the axes are
-                    # (db, Deg), in which case we create one ref with both
-                    if not (dlg.traceEns[i]) or \
-                            (i == 1 and "dB" in bothU and \
-                             ("Deg" in bothU or "CDeg" in bothU)):
-                        if debug:
-                            print ("SetRef not doing", refNum, i)
-                        continue
-                    ref = Ref.FromSpectrum(refNum, spec, vScale)
-                    if mode == 2:
-                        # if a fixed value, assign value
-                        rsp = ref.spectrum
-                        n = len(rsp.Fmhz)
-                        rsp.Sdb = zeros(n) + \
-                                         floatOrEmpty(dlg.valueABox.GetValue())
-                        if msa.mode >= MSA.MODE_VNATran:
-                            rsp.Sdeg = zeros(n) + \
-                                         floatOrEmpty(dlg.valueBBox.GetValue())
-                    # assign trace width(s), name, and math mode
-                    ref.name = dlg.nameBox.GetValue()
-                    ref.aWidth = int(dlg.widthACB.GetValue())
-                    if msa.mode >= MSA.MODE_VNATran:
-                        # ref for axis 0 may be both mag and phase traces
-                        ref.bWidth = int(dlg.widthBCB.GetValue())
-                    if ref.name == "":
-                        ref.name = "R%d" % refNum
-                    self.refs[refNum] = ref
-                    if refNum == 1:
-                        ref.mathMode = dlg.graphOptRB.GetSelection()
+        dlg.ShowModal()
+        p.refWinPos = dlg.GetPosition().Get()
 
         self.DrawTraces()
         self.specP.FullRefresh()
-        p.refWinPos = dlg.GetPosition().Get()
 
     #--------------------------------------------------------------------------
     # Open the Perform Calibration dialog box.
