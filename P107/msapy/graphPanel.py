@@ -480,7 +480,7 @@ class GraphPanel(wx.Panel):
                     fixName = "Shunt"
                 dc.DrawText("Fixture=%s" % fixName, xinfo, yinfo + y*dyText)
                 y += 1
-            dc.DrawText("Vers %s" % GetVersion, xinfo, yinfo + y*dyText)
+            dc.DrawText("Vers %s" % GetVersion(), xinfo, yinfo + y*dyText)
             y += 1
 
             # draw optional results text box
@@ -784,7 +784,11 @@ class GraphPanel(wx.Panel):
                         else:
                             scale = dyb
                             bot = vb0
-                        y = max(min(y1 - (m.dbm - bot) * scale, y1), y0)
+                        if tr.units == "Deg":
+                            val = m.deg
+                        else:
+                            val = m.dbm
+                        y = max(min(y1 - (val - bot) * scale, y1), y0)
                         q = 6
                         isPos = m.name != "P-"
                         ydir = 2*isPos - 1
@@ -974,7 +978,7 @@ class GraphPanel(wx.Panel):
     def WriteGraph(self, fileName, p):
         traces = self.traces
         f = open(fileName, "w")
-        f.write("!MSA, msapy %s\n" % version)
+        f.write("!MSA, msapy %s\n" % GetVersion())
         f.write("!Date: %s\n" % time.ctime())
         f.write("!Graph Data\n")
         f.write("!Freq(MHz)  %s\n" % string.join(["%16s" % k \
