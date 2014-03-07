@@ -12,7 +12,9 @@ from msa import MSA
 
 SetModuleVersion(__name__,("1.0","3/6/2014"))
 
-msa = None
+def SetMsa(val):
+    global msa
+    msa = val
 
 #==============================================================================
 # A single trace in a graph.
@@ -381,6 +383,7 @@ class S11Trace(Trace):
     top = 0
     bot = -100
     def __init__(self, spec, iScale):
+        global msa
         Trace.__init__(self, spec, iScale)
 #         self.Sdb = spec.Sdb
         if incremental:
@@ -417,6 +420,7 @@ class S11Trace(Trace):
         self.w = 2*pi*spec.f*MHz
 
     def SetStep(self, spec, i):
+        global msa
         if not self.maxHold:
             self.Sdb[i] = spec.Sdb[i]
         else:
