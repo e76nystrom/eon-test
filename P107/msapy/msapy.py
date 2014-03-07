@@ -75,6 +75,7 @@ import copy as dcopy
 import numpy.version
 from wx.lib.dialogs import ScrolledMessageDialog
 from numpy import zeros
+import trace
 from util import floatOrEmpty, modDegree
 from util import CheckExtension, ShouldntOverwrite, Prefs
 from util import mhzStr
@@ -82,8 +83,6 @@ from util import StartStopToCentSpan
 from util import CentSpanToStartStop
 from theme import DarkTheme, LightTheme
 from events import ResetEvents, LogGUIEvent, GuiEvents
-import trace
-from trace import traceTypesLists
 from msa import MSA
 from marker import Marker
 from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
@@ -367,8 +366,8 @@ class MSASpectrumFrame(wx.Frame):
 
         global msa
         self.msa = msa = MSA(self) # JGH MSA object is created here 1/25/14
-        trace.msa = msa
         msaGlobal.SetMsa(msa)
+        trace.SetMsa(msa)
 
         # initialize back end
         p.get("rbw", 300)
@@ -853,7 +852,7 @@ class MSASpectrumFrame(wx.Frame):
 
         # set left (0) and right (1) vertical scale variables
         # and create potential traces for each (trva, trvb)
-        types = traceTypesLists[mode]
+        types = trace.traceTypesLists[mode]
         maxIndex = len(types)-1
         vScales = specP.vScales
         vs0 = vScales[0]
@@ -1772,14 +1771,14 @@ class MSASpectrumFrame(wx.Frame):
             vScales = self.specP.vScales
             vs0 = vScales[0]
             vs0.typeIndex = 1
-            vs0.dataType = dataType = traceTypesLists[mode][vs0.typeIndex]
+            vs0.dataType = dataType = trace.traceTypesLists[mode][vs0.typeIndex]
             vs0.top = dataType.top
             vs0.bot = dataType.bot
             if vs0.top == 0 and vs0.bot == 0:
                 vs0.AutoScale(self)
             vs1 = vScales[1]
             vs1.typeIndex = (0, 2)[mode >= MSA.MODE_VNATran]
-            vs1.dataType = dataType = traceTypesLists[mode][vs1.typeIndex]
+            vs1.dataType = dataType = trace.traceTypesLists[mode][vs1.typeIndex]
             vs1.top = dataType.top
             vs1.bot = dataType.bot
             if vs1.top == 0 and vs1.bot == 0:
