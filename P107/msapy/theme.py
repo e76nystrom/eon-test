@@ -1,5 +1,5 @@
 from msaGlobal import SetModuleVersion
-import wx
+import string,wx
 
 SetModuleVersion(__name__,("1.0","3/6/2014"))
 
