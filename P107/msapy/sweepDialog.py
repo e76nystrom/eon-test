@@ -21,7 +21,7 @@ class SweepDialog(wx.Dialog):
         self.mode = None
         self.modeCtrls = []   # JGH modeCtrls does not exist anywhere
         self.prefs = p = frame.prefs
-        pos = p.get("sweepWinPos", (20, 720))
+        pos = p.get("sweepWinPos", (20, min(720, frame.screenHeight-275)))
         wx.Dialog.__init__(self, frame, -1, "Sweep Parameters", pos,
                             wx.DefaultSize, wx.DEFAULT_DIALOG_STYLE)
         c = wx.ALIGN_CENTER
