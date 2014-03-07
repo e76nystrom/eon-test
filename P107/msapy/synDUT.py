@@ -6,8 +6,7 @@ from numpy import angle, arange, cos, exp, \
 from numpy.fft import fft
 from msa import MSA
 from util import db, floatOrEmpty, floatSI, EquivS11FromS21, \
-    modDegree, si, SI_ASCII, \
-    fF, kHz, GHz, mH, MHz, Ohms, pF, ,pH
+    modDegree, si, SI_ASCII, fF, kHz, GHz, mH, MHz, Ohms, pF, pH
 
 SetModuleVersion(__name__,("1.0","3/6/2014"))
 
