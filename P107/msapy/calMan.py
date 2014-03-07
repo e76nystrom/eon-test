@@ -1,8 +1,10 @@
-from msaGlobal import appdir, GetFontSize, GetMsa, isMac
+from msaGlobal import appdir, GetFontSize, GetMsa, isMac, SetModuleVersion
 import string, os, time, wx
 from numpy import isnan
 from util import gstr, ShouldntOverwrite
 from StringIO import StringIO
+
+SetModuleVersion(__name__,("1.01","03/07/2014"))
 
 CalVersion = "1.03" # compatible version of calibration files
 
