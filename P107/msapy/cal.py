@@ -1,7 +1,6 @@
 from msaGlobal import GetMsa, GetVersion, SetModuleVersion
 import cmath, os, re, time, wx
 import copy as dcopy
-from coax import Coax
 from numpy import array, cos, interp, pi, sin, tan, zeros
 from util import constMaxValue, DegreesPerRad, floatOrEmpty, floatSI, message, \
     polarDbDeg, RadsPerDegree, uSafeLog10
@@ -2963,7 +2962,11 @@ class OslCal:
 
         (isErr, connect, R, L, C, QL, QC, D, coaxSpecs) = self.uParseRLC(spec)
         if not isErr:
-                (isErr, R0, VF, K1, K2, lenFeet) = Coax.CoaxParseSpecs(coaxSpecs) # EON Jan 29, 2014
+            if coaxSpecs != "":
+                from coax import Coax
+                (isErr, R0, VF, K1, K2, lenFeet) = Coax.CoaxParseSpecs(coaxSpecs)
+            else:
+                R0 = 50
 
 #     twoPi=2*uPi()
 # Note R0 is the impedance of any transmission line in the RLC combo; Z0 is the reference impedance for
