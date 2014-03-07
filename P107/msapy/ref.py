@@ -2,10 +2,14 @@ from msaGlobal import GetMsa, SetModuleVersion
 import wx
 import copy as dcopy
 import wx.lib.colourselect as csel
+from numpy import zeros
+from util import floatOrEmpty
 from msa import MSA
 from spectrum import Spectrum
 
 SetModuleVersion(__name__,("1.0","3/6/2014"))
+
+debug = False
 
 #==============================================================================
 # A Reference line. Created by copying another spectrum.
@@ -68,6 +72,7 @@ class RefDialog(wx.Dialog):
         # reference mode
         self.mode = 1
         choices = ["No Reference Lines", "Use Current Data", "Use Fixed Value"]
+        global msa
         msa = GetMsa()
         if msa.mode >= MSA.MODE_VNATran:
             choices += ["Use RLC Circuit"]
@@ -145,7 +150,8 @@ class RefDialog(wx.Dialog):
         btn = wx.Button(self, wx.ID_CANCEL)
         butSizer.Add(btn, 0, wx.ALL, 5)
         btn = wx.Button(self, wx.ID_OK)
-        btn.SetDefault()
+        btn.Bind(wx.EVT_BUTTON, self.OnOk)
+#        btn.SetDefault()
         butSizer.Add(btn, 0, wx.ALL, 5)
         sizerV.Add(butSizer, 0, wx.ALIGN_RIGHT|wx.ALL, 10)
 
@@ -189,3 +195,52 @@ class RefDialog(wx.Dialog):
 
     def OnHelp(self, event):
         pass
+
+    def OnOk(self, event):
+        global msa
+        frame = self.frame
+        mode = self.mode
+        refNum = self.refNum
+        if mode == 0:
+            # delete it
+            if frame.refs.has_key(refNum):
+                frame.refs.pop(refNum)
+        else:
+            # create a new ref from current data
+            spec = frame.spectrum
+            vScales = frame.specP.vScales
+            # get the units from both vertical scales
+            bothU = [vs.dataType.units for vs in vScales]
+            print ("bothU=", bothU)
+            for i in range(2):
+                vScale = vScales[i]
+                # create a ref for each axis, unless the axes are
+                # (db, Deg), in which case we create one ref with both
+                if not (self.traceEns[i]) or \
+                        (i == 1 and "dB" in bothU and \
+                         ("Deg" in bothU or "CDeg" in bothU)):
+                    if debug:
+                        print ("SetRef not doing", refNum, i)
+                    continue
+                ref = Ref.FromSpectrum(refNum, spec, vScale)
+                if mode == 2:
+                    # if a fixed value, assign value
+                    rsp = ref.spectrum
+                    n = len(rsp.Fmhz)
+                    rsp.Sdb = zeros(n) + \
+                                     floatOrEmpty(self.valueABox.GetValue())
+                    if msa.mode >= MSA.MODE_VNATran:
+                        rsp.Sdeg = zeros(n) + \
+                                     floatOrEmpty(self.valueBBox.GetValue())
+                # assign trace width(s), name, and math mode
+                ref.name = self.nameBox.GetValue()
+                ref.aWidth = int(self.widthACB.GetValue())
+                if msa.mode >= MSA.MODE_VNATran:
+                    # ref for axis 0 may be both mag and phase traces
+                    ref.bWidth = int(self.widthBCB.GetValue())
+                if ref.name == "":
+                    ref.name = "R%d" % refNum
+                frame.refs[refNum] = ref
+                if refNum == 1:
+                    ref.mathMode = self.graphOptRB.GetSelection()
+        self.Hide()
