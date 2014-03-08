@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion(__name__,("1.01","03/08/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -614,7 +614,7 @@ class MSA:
                 ##self.LogEvent("CaptureOneStep magTableADC")
             else:
                 # or just assume linear and estimate gain
-                Sdb = (self._magdata / 65536 - 0.5) * 200
+                Sdb = (self._magdata / 65536.0 - 0.5) * 200
                 ##self.LogEvent("CaptureOneStep Linear estimate")
 
             if useCal and len(self.freqTableMHz) > 0:
