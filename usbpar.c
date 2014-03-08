@@ -22,6 +22,7 @@
 // the safe side.
 #define NOP     __asm nop __endasm
 #define SYNCDELAY   NOP; NOP; NOP; NOP
+#define DELAY(n) for (len = n; len > 0; --len) NOP
 
 // MSA "control" port bits
 #define P1strobe 0x01    // latches data into port P1
@@ -32,6 +33,11 @@
 // MSA 'port' bits
 #define P3_ADCONV   0x80
 #define P3_ADSERCLK 0x40
+
+#if 0
+#define MAG   0x20
+#define PHASE 0x10
+#endif
 
 static void InitializeUSB(void)
 {
@@ -84,6 +90,9 @@ void main(void)
     char cmd;
     BYTE arg1, len, byte;
     unsigned int inlen, outlen, frame;
+#if 0
+    unsigned short mag, phase;
+#endif
 
     InitializeUSB();
     InitializePorts();
@@ -122,9 +131,11 @@ void main(void)
                             byte = *src++;
                             IOB = byte;
                             IOD = P1strobe;
+			    SYNCDELAY;
                             IOD = 0;
                             IOB = byte + arg1;
                             IOD = P1strobe;
+			    SYNCDELAY;
                             IOD = 0;
                         }
                         break;
@@ -182,17 +193,21 @@ void main(void)
                         outlen += arg1;
                         IOB = P3_ADCONV;
                         IOD = P3strobe;
-                        IOD = 0;
+			DELAY(15);
+			IOB = 0;
+			DELAY(3);
+			byte = 0xf;
                         for (; arg1 > 0; arg1--)
                         {
                             IOB = P3_ADSERCLK;
-                            IOD = P3strobe;
-                            IOD = 0;
-                            *dest++ = IOA;
-                            IOB = 0;
-                            IOD = P3strobe;
-                            IOD = 0;
+			    byte |= IOA & 0x30;
+                            *dest++ = byte;
+			    byte = arg1 & 0x7;
+			    IOB = 0;
+			    DELAY(5);
                         }
+			NOP;
+			IOD = 0;
                         break;
 
                     case 'V': // Version of code
