@@ -1704,33 +1704,21 @@ class MSASpectrumFrame(wx.Frame):
     # Set the main operating mode.
 
     def SetMode_SA(self, event):
-        p = self.prefs
-        p.switchSG = 0   # JGH: Switch not implemented in software
         self.SetMode(MSA.MODE_SA)
 
     def SetMode_SATG(self, event):
-        p = self.prefs
-        p.switchSG = 1   # JGH: Switch not implemented in software
         self.SetMode(MSA.MODE_SATG)
 
     def SetMode_VNATran(self, event):
-        # Start EON Jan 22, 2014
-        p = self.prefs
-        p.switchTR = 0   # JGH 11/25/13
-        # End EON Jan 22, 2014
         self.SetMode(MSA.MODE_VNATran)
 
     def SetMode_VNARefl(self, event):
-        # Start EON Jan 22, 2014
-        p = self.prefs
-        p.switchTR = 1   # JGH 11/25/13
-        # End EON Jan 22, 2014
         self.SetMode(MSA.MODE_VNARefl)
 
     def SetMode(self, mode):
         self.StopScanAndWait()
 
-        self.InitMode(mode) # EON Jan 22, 2014
+        self.InitMode(mode)
 
         if debug:
             print ("Changed MSA mode to", msa.modeNames[mode])
@@ -1762,20 +1750,21 @@ class MSASpectrumFrame(wx.Frame):
     # Initializes menu bar based on mode
     def InitMode(self,mode):
         p = self.prefs
-##        if mode == MSA.MODE_VNATran:
-##            p.switchTR = 0   # JGH 11/25/13
-##        if mode == MSA.MODE_VNARefl:
-##            p.switchTR = 1   # JGH 11/25/13
+        if mode == MSA.MODE_SA:
+            p.switchSG = 0
+        elif mode == MSA.MODE_SATG:
+            p.switchSG = 1
+        elif mode == MSA.MODE_VNATran:
+            p.switchTR = 0
+        elif mode == MSA.MODE_VNARefl:
+            p.switchTR = 1
 
         p.calLevel = msa.calLevel = 0
 
         menuBar = self.MenuBar
         i = menuBar.FindMenu("Functions")
         funcMenu = menuBar.GetMenu(i)
-##        items = funcMenu.GetMenuItems()    # JGH These 2 used only here, no need to rename
-##        funcList = self.funcModeList[mode]
         skip = True
-##        for m in items:
         for m in funcMenu.GetMenuItems():
             txt = m.GetText().lower()
             if len(txt) == 0:
@@ -1783,7 +1772,6 @@ class MSASpectrumFrame(wx.Frame):
             if skip:
                 continue # Goes no next m
             found = False # Divider line found
-##            for val in funcList:
             for val in self.funcModeList[mode]:
                 if val in txt:
                     found = True
@@ -1799,7 +1787,6 @@ class MSASpectrumFrame(wx.Frame):
                 i = menuBar.FindMenu("Mode")
                 if i > 0:
                     menuBar.Insert(i,self.operatingCalMenu,"Operating Cal")
-    # End EON Jan 22, 2014
 
     #--------------------------------------------------------------------------
     # Handle a resize event of the main frame or log pane sash.
