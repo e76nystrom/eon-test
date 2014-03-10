@@ -4,9 +4,10 @@ from msa import MSA
 from util import floatOrEmpty, gstr, mhzStr
 from events import LogGUIEvent
 from util import StartStopToCentSpan, CentSpanToStartStop
+from stepAtten import SetStepAttenuator
 from theme import DarkTheme, LightTheme
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion(__name__,("1.01","03/10/2014"))
 
 debug = False
 
@@ -113,6 +114,7 @@ class SweepDialog(wx.Dialog):
         freqBox = wx.StaticBoxSizer(freqBoxTitle, wx.HORIZONTAL)
         freqSizer = wx.GridBagSizer(0, 0)
         self.centSpanRB = rb = wx.RadioButton(self, -1, "", style= wx.RB_GROUP)
+        self.skip = False
         self.Bind(wx.EVT_RADIOBUTTON, self.AdjFreqTextBoxes, rb)
         freqSizer.Add(rb, (0, 0), (2, 1), 0, 0)
         cl = wx.ALIGN_CENTER|wx.LEFT
@@ -368,6 +370,8 @@ class SweepDialog(wx.Dialog):
             self.mode = newMode
             sizerVM.Layout()
 
+        tmp = self.skip
+        self.skip = True
         # Cent-Span or Start-Stop frequency entry
         isCentSpan = p.get("isCentSpan", True)
         self.centSpanRB.SetValue(isCentSpan)
@@ -377,6 +381,7 @@ class SweepDialog(wx.Dialog):
         self.startstopRB.SetValue(not isCentSpan)
         self.startBox.SetValue(str(p.fStart))
         self.stopBox.SetValue(str(p.fStop))
+        self.skip = tmp
 
         # other sweep parameters
         self.stepsBox.SetValue(str(p.nSteps))
@@ -415,6 +420,7 @@ class SweepDialog(wx.Dialog):
         #--------------------------------------------------------------------------
 
     def calculateWait(self):    # JGH added this  method
+        global msa
         p = self.frame.prefs
         p.vFilterSelName = self.videoFiltCM.GetValue()
         p.vFilterSelIndex = msa.vFilterNames.index(p.vFilterSelName)
@@ -451,6 +457,8 @@ class SweepDialog(wx.Dialog):
     # Only enable selected freq text-entry boxes, and make other values track.
 
     def AdjFreqTextBoxes(self, event=None, final=False):
+        if event and self.skip:
+            return
         isLogF = self.logRB.GetValue()
         isCentSpan = self.centSpanRB.GetValue()
         self.centBox.Enable(isCentSpan)
@@ -494,6 +502,7 @@ class SweepDialog(wx.Dialog):
     # Grab new values from sweep dialog box and update preferences.
 
     def Apply(self, event=None):
+        global msa
         frame = self.frame
         specP = frame.specP
         p = self.prefs
@@ -545,7 +554,7 @@ class SweepDialog(wx.Dialog):
         ##p.atten5 = self.atten5CB.IsChecked()
         p.atten5 = False
         p.stepAttenDB = attenDB = floatOrEmpty(self.stepAttenBox.GetValue())
-        frame.SetStepAttenuator(attenDB)
+        SetStepAttenuator(attenDB)
         if self.mode == MSA.MODE_SA:
             p.sigGenFreq = floatOrEmpty(self.sigGenFreqBox.GetValue())
         elif self.mode == MSA.MODE_SATG:
@@ -559,7 +568,6 @@ class SweepDialog(wx.Dialog):
         p.isCentSpan = self.centSpanRB.GetValue()
         p.nSteps = int(self.stepsBox.GetValue())
         p.continuous = self.continCB.GetValue()
-
 
         if self.autoWaitCB.GetValue() == True:   # JGH 11/27/13
             self.calculateWait()
