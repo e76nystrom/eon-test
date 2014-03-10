@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion(__name__,("1.02","03/10/2014"))
+SetModuleVersion(__name__,("1.03","03/10/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -346,6 +346,8 @@ class MSA:
 
         hardwarePresent = GetHardwarePresent()
         if not hardwarePresent:
+            if cb == None:
+                cb = MSA_CB()
             return
 
         # Determine which interface to use to talk to the MSA's Control Board
@@ -605,7 +607,7 @@ class MSA:
 
             else:
                 self.LogEvent("CaptureOneStep synth, f=%g" % f)
-##                self._InputSynth(f) # JGH syndutHook4
+                self._InputSynth(f)
                 #invPhase = 0
                 cb.msWait(self.wait)
                 # sleep for 1 ms to give GUI a chance to catch up on key events
