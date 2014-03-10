@@ -31,7 +31,7 @@ version = "2.7.P3 (2/2/14)"
 version = "2.7.P106 (2/3/14)"
 version = "P108JGH_F (2/24/14)"
 version = "P109GEORGE (2/25/14)"
-version = "G109d (3/4/14)"
+version = "1.01 (3/10/14)"
 # NOTE by JGH Dec 8, 2013: An attempt has been made to convert the Python 2.7 code to Python 3.
 # The conversion has been completed and affected print statements (require parentheses),
 # lambda functions (require being enclosed in parentheses) and unicode encoding using chr().
@@ -65,22 +65,16 @@ print ("Python:", sys.version) # Requires python v2.7
 print("sys.platform: ", sys.platform)
 
 import msaGlobal
-from msaGlobal import appdir, GetLO1, GetLO3, incremental, \
+from msaGlobal import appdir, EVT_UPDATE_GRAPH, GetLO1, GetLO3, incremental, \
     isMac, isWin, msPerUpdate, resdir, SetFontSize, \
     SetHardwarePresent, SetVersion, slowDisplay, winUsesParallelPort
-from msaGlobal import EVT_UPDATE_GRAPH
-import os, re, string, wx
-import time, threading
+import os, re, string, time, threading, wx
 import copy as dcopy
 import numpy.version
 from wx.lib.dialogs import ScrolledMessageDialog
-from numpy import zeros
 import trace
-from util import floatOrEmpty, modDegree
-from util import CheckExtension, ShouldntOverwrite, Prefs
-from util import mhzStr
-from util import StartStopToCentSpan
-from util import CentSpanToStartStop
+from util import CentSpanToStartStop, CheckExtension, Prefs, \
+    mhzStr, modDegree, ShouldntOverwrite, StartStopToCentSpan
 from theme import DarkTheme, LightTheme
 from events import ResetEvents, LogGUIEvent, GuiEvents
 from msa import MSA
@@ -755,15 +749,6 @@ class MSASpectrumFrame(wx.Frame):
             self.StopScanAndWait()
         else:
             self.ScanPrecheck(False)
-
-    #--------------------------------------------------------------------------
-    # Set Step Attenuator.
-
-    def SetStepAttenuator(self, value):
-        if msa.IsScanning():
-            self.StopScanAndWait()
-        from stepAtten import SetStepAttenuator
-        SetStepAttenuator(value)
 
     #--------------------------------------------------------------------------
     # Timer tick: update display.
