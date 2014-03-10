@@ -126,7 +126,6 @@ else:
             os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = fwdir
 
 cb = None               # the current MSA Control Board, if present.
-hardwarePresent = True  # True when cb represents actual hardware.
 
 #******************************************************************************
 #****                          MSA GUI Front End                          *****
