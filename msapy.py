@@ -86,14 +86,10 @@ from spectrum import Spectrum
 SetVersion(version)
 
 msa = None
-cb = None               # the current MSA Control Board, if present.
 
 # debugging and profiling settings
 
 debug = False        # set True to write debugging messages to msapy.log
-
-# set numpy divide-by-zero errors to be fatal
-##seterr(all="raise")
 
 # standard font pointsize-- will be changed to calibrated size for this system
 fontSize = 11
@@ -124,8 +120,6 @@ else:
         print ("fwdir :    " + str(fwdir))
         if os.path.exists(fwdir):
             os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = fwdir
-
-cb = None               # the current MSA Control Board, if present.
 
 #******************************************************************************
 #****                          MSA GUI Front End                          *****
@@ -491,7 +485,7 @@ class MSASpectrumFrame(wx.Frame):
             self.lineCount = 0
 
         def write(self, s):
-            global logFile
+            global msa, logFile
             try:
                 if "\n" in s:
                     self.lineCount += 1
@@ -574,6 +568,7 @@ class MSASpectrumFrame(wx.Frame):
     # Start capturing a spectrum.
 
     def ScanPrecheck(self, haltAtEnd):
+        global msa
         self.StopScanAndWait()
         ResetEvents()
         LogGUIEvent("ScanPrecheck")
@@ -624,7 +619,8 @@ class MSASpectrumFrame(wx.Frame):
     #--------------------------------------------------------------------------
     # Check requested calibration level and set based on calibration present
 
-    def CalCheck(self): # EON Jan 29, 2014
+    def CalCheck(self):
+        global msa
         p = self.prefs
         cal = (None, msa.baseCal, msa.bandCal)[p.calLevel]
         if cal:
@@ -679,6 +675,7 @@ class MSASpectrumFrame(wx.Frame):
     # Stop any scanning and wait for all results to be updated.
 
     def StopScanAndWait(self):
+        global msa
         self.specP.markersActive = True
         if msa.IsScanning():
             msa.StopScan()
@@ -690,6 +687,7 @@ class MSASpectrumFrame(wx.Frame):
     # Wait for end of scan and all results to be updated.
 
     def WaitForStop(self):
+        global msa
         while msa.IsScanning() or not msa.scanResults.empty():
             self.wxYield()
             time.sleep(0.1)
@@ -699,6 +697,7 @@ class MSASpectrumFrame(wx.Frame):
     # "One Step" button pressed.
 
     def DoOneStep(self, event=None):
+        global msa
         LogGUIEvent("DoOneStep")
         self.StopScanAndWait()
         if not self.needRestart:
@@ -710,6 +709,7 @@ class MSASpectrumFrame(wx.Frame):
     # "One Scan"/"Halt at End" button pressed.
 
     def OnOneScanOrHaltAtEnd(self, event):
+        global msa
         LogGUIEvent("OnOneScanOrHaltAtEnd: scanning=%d" % msa.IsScanning())
         if msa.IsScanning():
             msa.haltAtEnd = True
@@ -728,6 +728,7 @@ class MSASpectrumFrame(wx.Frame):
     # Continue/Halt button pressed.
 
     def OnContinueOrHalt(self, event):
+        global msa
         LogGUIEvent("OnContinueOrHalt")
         if msa.IsScanning():
             self.StopScanAndWait()
@@ -742,6 +743,7 @@ class MSASpectrumFrame(wx.Frame):
     # Restart/Halt button pressed.
 
     def OnRestartOrHalt(self, event):
+        global msa
         LogGUIEvent("OnRestartOrHalt: scanning=%d step=%d" % \
             (msa.IsScanning(), msa.GetStep()))
         if msa.IsScanning(): # or self.needRestart:
@@ -753,6 +755,7 @@ class MSASpectrumFrame(wx.Frame):
     # Timer tick: update display.
 
     def OnTimer(self, event):
+        global msa
         specP = self.specP
         assert wx.Thread_IsMain()
         ##LogGUIEvent("OnTimer")
@@ -820,6 +823,7 @@ class MSASpectrumFrame(wx.Frame):
     # and draw them.
 
     def DrawTraces(self):
+        global msa
         if debug:
             print ("DrawTraces")
         specP = self.specP
@@ -975,7 +979,7 @@ class MSASpectrumFrame(wx.Frame):
     # Open the Configuration Manager dialog box.
 
     def ManageHWConfig(self, event=None): # JGH This method heavily modified 1/20/14
-
+        global msa
         self.StopScanAndWait()
         p = self.prefs
         from configDialog import ConfigDialog
@@ -1232,7 +1236,7 @@ class MSASpectrumFrame(wx.Frame):
     # Open the Synthetic DUT dialog box.
 
     def SynDUT(self, event=None): # JGH 2/8/14 syndutHook7
-        global cb, msa
+        global msa
         if not msa.syndut:
             from msa_cb import MSA_CB
             cb = MSA_CB()
@@ -1268,6 +1272,7 @@ class MSASpectrumFrame(wx.Frame):
 
     class VarDialog(wx.Dialog):
         def __init__(self, frame):
+            global msa
             self.frame = frame
             self.prefs = p = frame.prefs
             framePos = frame.GetPosition()
@@ -1497,10 +1502,9 @@ class MSASpectrumFrame(wx.Frame):
     # Set the calibration reference to Band, Base, or None.
 
     def SetCalRef_Band(self, event):
-        # Start EON Jan 13 2014
+        global msa
         if msa.IsScanning():
             self.StopScanAndWait()
-        # End EON Jan 13 2014
         if not msa.bandCal:
             self.PerformCal()
         if msa.bandCal:
@@ -1508,10 +1512,9 @@ class MSASpectrumFrame(wx.Frame):
         self.RefreshAllParms()
 
     def SetCalRef_Base(self, event):
-        # Start EON Jan 13 2014
+        global msa
         if msa.IsScanning():
             self.StopScanAndWait()
-        # End EON Jan 13 2014
         if not msa.baseCal:
             self.PerformCal()
         if msa.baseCal:
@@ -1527,29 +1530,31 @@ class MSASpectrumFrame(wx.Frame):
     # and data files in sync.
 
     def SetCalLevel(self, level):
+        global msa
         p = self.prefs
         msa.calLevel = p.calLevel = level
         if self.CalCheck(): # EON Jan 29, 2014
             self.RefreshAllParms()
 
     def SetBandCal(self, spectrum):
+        global msa
         msa.bandCal = spectrum
         if spectrum:
             msa.bandCal.WriteS1P(self.bandCalFileName, self.prefs,
                                  contPhase=True)
         else:
-            # Start EON Jan 10 2014
             try:
                 os.unlink(self.bandCalFileName)
             except:
                 pass
-            # End EON Jan 10 2014
 
     def SetBaseCal(self, spectrum):
+        global msa
         msa.baseCal = spectrum
         self.SaveCal(spectrum, self.baseCalFileName)
 
     def SetBandeCal(self, spectrum):
+        global msa
         msa.bandCal = spectrum
         self.SaveCal(spectrum, self.bandCalFileName)
 
@@ -1570,6 +1575,7 @@ class MSASpectrumFrame(wx.Frame):
             return None
 
     def CopyBandToBase(self):
+        global msa
         if msa.bandCal != None:
             msa.baseCal = dcopy.deepcopy(msa.bandCal)
             msa.baseCal.WriteS1P(self.baseCalFileName, self.prefs, contPhase=True)
@@ -1578,6 +1584,7 @@ class MSASpectrumFrame(wx.Frame):
     # Read CalPath file for mag/phase linearity adjustment.
 
     def ReadCalPath(self):
+        global msa
         if debug:
             print ("10,665 Reading path calibration")
         self.StopScanAndWait()
@@ -1598,6 +1605,7 @@ class MSASpectrumFrame(wx.Frame):
     # Read CalFreq file for mag frequency-dependent adjustment.
 
     def ReadCalFreq(self):
+        global msa
         if debug:
             print ("Reading frequency calibration")
         self.StopScanAndWait()
@@ -1622,6 +1630,7 @@ class MSASpectrumFrame(wx.Frame):
         self.SaveData(writer=self.spectrum.WriteInput, name="InputData.txt")
 
     def SaveInstalledLineCal(self, event):
+        global msa
         p = self.prefs
         if p.calLevel == 1:
             self.SaveData(data=msa.bandCal, writer=self.SaveCal,
@@ -1634,9 +1643,11 @@ class MSASpectrumFrame(wx.Frame):
     # Write debugging event lists to a file.
 
     def WriteEvents(self, event):
+        global msa
         msa.WriteEvents(GuiEvents())
 
     def DumpEvents(self, event):
+        global msa
         msa.DumpEvents()
 
     #--------------------------------------------------------------------------
@@ -1688,18 +1699,23 @@ class MSASpectrumFrame(wx.Frame):
     # Set the main operating mode.
 
     def SetMode_SA(self, event):
+        global msa
         self.SetMode(MSA.MODE_SA)
 
     def SetMode_SATG(self, event):
+        global msa
         self.SetMode(MSA.MODE_SATG)
 
     def SetMode_VNATran(self, event):
+        global msa
         self.SetMode(MSA.MODE_VNATran)
 
     def SetMode_VNARefl(self, event):
+        global msa
         self.SetMode(MSA.MODE_VNARefl)
 
     def SetMode(self, mode):
+        global msa
         self.StopScanAndWait()
 
         self.InitMode(mode)
@@ -1733,6 +1749,7 @@ class MSASpectrumFrame(wx.Frame):
     # Start EON Jan 22, 2014
     # Initializes menu bar based on mode
     def InitMode(self,mode):
+        global msa
         p = self.prefs
         if mode == MSA.MODE_SA:
             p.switchSG = 0
@@ -1831,6 +1848,7 @@ class MSASpectrumFrame(wx.Frame):
     # Quitting.
 
     def OnExit(self, event):
+        global msa
         if msa.syndut:    # JGH syndutHook8
             msa.syndut.Close()
         if self.smithDlg:
