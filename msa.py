@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion(__name__,("1.03","03/10/2014"))
+SetModuleVersion(__name__,("1.04","03/10/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -344,6 +344,7 @@ class MSA:
     def InitializeHardware(self):
         global cb, hardwarePresent, LO1, LO2, LO3
 
+        from msa_cb import MSA_CB
         hardwarePresent = GetHardwarePresent()
         if not hardwarePresent:
             if cb == None:
@@ -352,7 +353,6 @@ class MSA:
 
         # Determine which interface to use to talk to the MSA's Control Board
 
-        from msa_cb import MSA_CB
         if not cb:
             if isWin and winUsesParallelPort:
                 from msa_cb_pc import MSA_CB_PC
