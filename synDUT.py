@@ -1,4 +1,5 @@
-from msaGlobal import GetHardwarePresent, GetMsa, isMac, SetHardwarePresent, SetModuleVersion
+from msaGlobal import GetMsa, isMac, SetHardwarePresent, \
+    SetModuleVersion
 import wx
 from numpy import angle, arange, cos, exp, \
     interp, log10, logspace, linspace, \
@@ -8,7 +9,7 @@ from msa import MSA
 from util import db, floatOrEmpty, floatSI, EquivS11FromS21, \
     modDegree, si, SI_ASCII, fF, kHz, GHz, mH, MHz, Ohms, pF, pH
 
-SetModuleVersion(__name__,("1.01","03/10/2014"))
+SetModuleVersion(__name__,("1.02","03/10/2014"))
 
 debug = False        # set True to write debugging messages to msapy.log
 
