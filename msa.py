@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion(__name__,("1.01","03/08/2014"))
+SetModuleVersion(__name__,("1.02","03/10/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -259,6 +259,7 @@ class MSA:
 
 ##    def _CommandAllSlims(self, f):
     def _CommandAllSlims(self):    
+        global cb
         p = self.frame.prefs
         f = self._freqs[0]
         band = min(max(int(f/1000) + 1, 1), 3) # JGH Initial band
@@ -288,6 +289,7 @@ class MSA:
     #--------------------------------------------------------------------------
 
     def sendByteList(self):            
+        global cb
         byteList = self.SweepArray[self._step]
         cb.SendDevBytes(byteList, cb.P1_Clk)    # JGH 2/9/14
 
@@ -314,6 +316,7 @@ class MSA:
     # Command just the PDM's static data.
 
     def _CommandPhaseOnly(self):
+        global cb
         cb.SetP(2, self.invPhase << cb.P2_pdminvbit)
         cb.setIdle()
 
@@ -321,6 +324,7 @@ class MSA:
     # Set the GHz frequency band: 1, 2, or 3.
 
     def _SetFreqBand(self, band, extraBits=0):
+        global cb
         self._GHzBand = band
         band += extraBits
         if self._GHzBand == 2:
@@ -368,7 +372,6 @@ class MSA:
                 cb = MSA_CB()
                 hardwarePresent = False
                 SetHardwarePresent(hardwarePresent)
-
         SetCb(cb)
 
         if not hardwarePresent:
@@ -497,6 +500,7 @@ class MSA:
     # Read 16-bit magnitude and phase ADCs.
 
     def _ReadAD16Status(self):
+        global cb
         # Read16wSlimCB --
         mag, phase = cb.GetADCs(16)
         mag   >>= cb.P5_MagDataBit
@@ -526,6 +530,7 @@ class MSA:
     # Capture magnitude and phase data for one step.
 
     def CaptureOneStep(self, post=True, useCal=True, bypassPDM=False):
+        global cb
         p = self.frame.prefs  # JGH/SCOTTY 2/6/14
         step = self._step
         if logEvents:
@@ -746,6 +751,7 @@ class MSA:
     # Internal scan loop thread.
 
     def _ScanThread(self):
+        global cb
         try:
             self.LogEvent("_ScanThread")
 
@@ -885,6 +891,7 @@ class MSA:
     # not transition with a data transition, preventing crosstalk in LPT cable.
 
     def CreateSweepArray(self): # aka GEORGE
+        global cb
         if 1:
             print(">>>2975<<< Creating GEORGE, the SweepArray")
         
@@ -1079,6 +1086,7 @@ class MSA_LO:
     # Set a PLL's register.
 
     def CommandPLL(self, data):
+        global cb
         # CommandPLLslim --
         if debug:
             print ("LO%d CommandPLL 0x%06x" % (self.id, data))
@@ -1143,6 +1151,7 @@ class MSA_LO:
     # Reset serial DDS without disturbing Filter Bank or PDM.
 
     def ResetDDSserSLIM(self):
+        global cb
         # must have DDS (AD9850/9851) hard wired. pin2=D2=0, pin3=D1=1,
         # pin4=D0=1, D3-D7 are don# t care. this will reset DDS into
         # parallel, invoke serial mode, then command to 0 Hz.
