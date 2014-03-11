@@ -1,10 +1,10 @@
-from msaGlobal import appdir, GetLO1, GetLO3, GetMsa, \
+from msaGlobal import appdir, GetLO1, GetLO3, GetModuleInfo, GetMsa, \
     isMac, isWin, SetModuleVersion
 import os
 import wx.grid
 from util import gstr, mu
 
-SetModuleVersion("configDialog",("1.02","EON","03/11/2014"))
+SetModuleVersion("configDialog",("1.0","JGH.a","3/8/2014"))
 
 #==============================================================================
 # The MSA/VNA Configuration Manager dialog box (also modal) # JGH
@@ -103,7 +103,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         self.tcPhF1 = tcPhF1
         sizerG1.Add(tcPhF1, (6, 0), flag=c)
 
-        s = p.get("PLL2phasefreq", 4.000) # JGH 2/15/14
+        s = p.get("PLL2phasefreq", 4.000)
         tcPhF2 = wx.TextCtrl(self, -1, gstr(s), size=tsz)
         tcPhF2.Enable(True)
         self.tcPhF2 = tcPhF2
@@ -255,50 +255,42 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         sizerH2.Add(sizerV2B, 0, wx.ALL|wx.EXPAND, 4)
         sizerV2.Add(sizerH2, 0)
 
-        # Optional Modules
+        # Module Information
         optModsTitle = \
-                wx.StaticBox(self, -1, "Optional Modules" ) #JGH 3/3/14
+                wx.StaticBox(self, -1, "Imported Module Information" ) #JGH 3/8/14
         sizerH3 = wx.StaticBoxSizer(optModsTitle, wx.HORIZONTAL)
-        sizerV3A = wx.BoxSizer(wx.VERTICAL)
-        st = wx.StaticText(self, -1, "Available Mods")
-        sizerV3A.Add(st, 0, flag=c)
+        importedModules = []
+        ModuleInfo = GetModuleInfo()
+        #list(ModuleInfo.keys()):
+        for verStr in sorted(ModuleInfo.iteritems(), \
+                           key=lambda key_value: key_value[0]):
+            modver = verStr[0] + "-" + str(verStr[1])
+            importedModules.append(modver)
+
         availModList = wx.ListBox(self, -1, pos=wx.DefaultPosition, \
-                                  size=(120,120), choices=['DUTatten', 'SyntDUT'], \
+                                  size=(360,120), choices=importedModules, \
                                   style=wx.LB_ALWAYS_SB|wx.LB_SINGLE)
-        sizerV3A.Add(availModList, 1, flag=c)
-        sizerH3.Add(sizerV3A, 0)
-        sizerV3B = wx.BoxSizer(wx.VERTICAL)
-        mrBtn = wx.Button(self, -1, ">>")
-        mrBtn.Bind(wx.EVT_BUTTON, self.OnMoveRight)
-        sizerV3B.Add(mrBtn, 0, flag=c)
-        mlBtn = wx.Button(self, -1, "<<")
-        mlBtn.Bind(wx.EVT_BUTTON, self.OnMoveLeft)
-        sizerV3B.Add(mlBtn, 0, flag=c)
-        sizerH3.Add(sizerV3B, 1, flag=wx.ALIGN_CENTER_VERTICAL)
-        sizerV3C = wx.BoxSizer(wx.VERTICAL)
-        st = wx.StaticText(self, -1, "Imported Mods")
-        sizerV3C.Add(st, 0, flag=c)
-        importModList = wx.ListBox(self, -1, pos=wx.DefaultPosition, \
-                                  size=(120,120), choices="", style=wx.LB_ALWAYS_SB|wx.LB_SINGLE)
-        sizerV3C.Add(importModList, 1, flag=c)
-        sizerH3.Add(sizerV3C, 2)
-        sizerV2.Add(sizerH3, 0)
+        sizerH3.Add(availModList, 1, flag=c)
+        sizerV2.Add(sizerH3, 0, wx.ALL|wx.EXPAND, 4)
         
         # TOPOLOGY
 
-        self.topologyBoxTitle = wx.StaticBox(self, -1, "Topology")
-        sizerV2C = wx.StaticBoxSizer(self.topologyBoxTitle, wx.VERTICAL)
+        self.topoTitle = wx.StaticBox(self, -1, "Topology")
+        sizerV2C = wx.StaticBoxSizer(self.topoTitle, wx.VERTICAL)
 
         sizerG2B = wx.GridBagSizer(hgap=4, vgap=2)
         cwsz = (120, -1)
 
-        sizerG2B.Add(wx.StaticText(self, -1,  "ADC type" ), (0, 0), flag=cvl)
+        sizerG2B.Add(wx.StaticText(self, -1, "ADC type" ), (0, 0), flag=cvl)
         ADCoptions = ["16bit serial", "12bit serial", "12bit ladder"]
         s = p.get("ADCtype", ADCoptions[0])
-        cm = wx.ComboBox(self, -1, s, (0, 0), cwsz, style=wx.CB_READONLY)
-        cm.Enable(True)
-        self.ADCoptCM = cm
+        self.ADCoptCM = cm = wx.ComboBox(self, -1, s, (0, 1), cwsz, style=wx.CB_READONLY)
         sizerG2B.Add(cm, (0, 1), flag=cv)
+
+        self.syntDataCB = chk1 = wx.CheckBox(self, -1, "Use Synthetic Data")
+        self.Bind(wx.EVT_CHECKBOX, self.AllowSyntData, chk1)
+        self.syntDataCB.SetValue(p.get("syntData", True))
+        sizerG2B.Add(chk1, (0,2), flag=cv)        
 
         sizerG2B.Add(wx.StaticText(self, -1,  "Interface" ), (1, 0), flag=cvl)
         
@@ -308,10 +300,8 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         else:
             CBoptions = ['USB', 'RPI', 'BBB'] # JGH 1/16/14
             s = p.get("CBopt", CBoptions[0])
-        cm = wx.ComboBox(self, -1, s, (0, 0), cwsz, choices=CBoptions, style=wx.CB_READONLY)
-        cm.Enable(True)
+        self.CBoptCM = cm = wx.ComboBox(self, -1, s, (1, 1), cwsz, choices=CBoptions, style=wx.CB_READONLY)
         sizerG2B.Add(cm, (1, 1), flag=cv)
-        self.CBoptCM = cm
         sizerV2C.Add(sizerG2B, 0, wx.ALL, 5)
 
         sizerV2.Add(sizerV2C, 0, wx.ALL|wx.EXPAND, 4)
@@ -320,6 +310,8 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         # JGH add end
 
         sizerV0.Add(sizerH0, 0, wx.ALL, 10)
+
+
 
         self.SetSizer(sizerV0)
         sizerV0.Fit(self)
@@ -343,6 +335,16 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
 
     def OnModOK(self, event=None):
         pass
+
+    #--------------------------------------------------------------------------
+
+    def AllowSyntData(self, event):
+        sender = event.GetEventObject()
+        p = self.frame.prefs
+        if sender.GetValue() == 0:  # Do not use
+            p.syntData = False
+        else:
+            p.syntData = True  # Allow
 
     #--------------------------------------------------------------------------
     # Present Help dialog.

@@ -8,6 +8,10 @@ def SetModuleVersion(name, version):
     print (name, version)
     ModuleInfo[name] = version
 
+def GetModuleInfo():
+    global ModuleInfo
+    return(ModuleInfo)
+
 SetModuleVersion("msaGlobal",("1.02","EON","03/11/2014"))
 
 logEvents = False

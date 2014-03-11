@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.06","EON","03/11/2014"))
+SetModuleVersion("msa",("1.0","JGH.a","3/10/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -60,7 +60,9 @@ class MSA:
         self.vFilterSelIndex = p.get("vFilterSelIndex", 2) # JGH This is the default mode
         self.vFilterSelName = self.vFilterNames[self.vFilterSelIndex]
         self.bitsVideo = p.get("vFilterSelIndex", 2)
-        self.cftest = p.get("cftest", 0)
+        self.cftest = p.get("cftest", False)
+        # Trace blanking gap
+        self.bGap = p.get("bGap", False)
         
         # SG output frequency (MHz)
         self._sgout = 10.
@@ -255,10 +257,9 @@ class MSA:
     # This format guarantees that the common clock will
     # not transition with a data transition, preventing crosstalk in LPT cable.
 
-    # The attenuator code is left here for future implementation
-
+    
 ##    def _CommandAllSlims(self, f):
-    def _CommandAllSlims(self):    
+    def _CommandAllSlims(self):
         global cb
         p = self.frame.prefs
         f = self._freqs[0]
@@ -288,7 +289,7 @@ class MSA:
                 self.sendByteList()
     #--------------------------------------------------------------------------
 
-    def sendByteList(self):            
+    def sendByteList(self):
         global cb
         byteList = self.SweepArray[self._step]
         cb.SendDevBytes(byteList, cb.P1_Clk)    # JGH 2/9/14
@@ -548,13 +549,14 @@ class MSA:
             doPhase = self.mode > self.MODE_SATG
             #invPhase = self.invPhase
             if hardwarePresent:
-                self.LogEvent("CaptureOneStep hardware, f=%g" % f)
+                if 0:
+                    self.LogEvent("CaptureOneStep hardware, f=%g" % f)
                 # set MSA to read frequency f
 ##                self._CommandAllSlims(f) # SweepArray doesn't need f
                 self._CommandAllSlims()
 
     # ------------------------------------------------------------------------------
-                if p.cftest ==1:
+                if p.cftest == 1:
 ##                      cavityLO2 = self.finalfreq + LO1.freq
                     cavityLO2 =1013.3 + self.finalfreq + f
                     print ("freq: ", f)
@@ -563,7 +565,8 @@ class MSA:
                     LO2.freq = ((LO2.Bcounter*LO2.preselector) + LO2.Acounter+(LO2.fcounter/16))*LO2.pdf
                     LO2.CommandPLL(LO2.PLLbits)
     # ------------------------------------------------------------------------------
-                self.LogEvent("CaptureOneStep delay")
+                if 0:
+                    self.LogEvent("CaptureOneStep delay")
                 if step == 0:
                     # give the first step extra time to settle
                     cb.msWait(200)
@@ -571,13 +574,14 @@ class MSA:
                     self._CommandAllSlims() # SweepArray doesn't need f
                 cb.msWait(self.wait)
                 # read raw magnitude and phase
-                self.LogEvent("CaptureOneStep read")
+                if 0:
+                    self.LogEvent("CaptureOneStep read")
                 cb.ReqReadADCs(16)
                 cb.FlushRead()
                 cb.Flush()
                 time.sleep(0)
                 self._ReadAD16Status()
-                if logEvents: # EON Jan 22, 2014
+                if 0 and logEvents: # EON Jan 22, 2014/ jGH 3/9/14
                     self._events.append(Event("CaptureOneStep got %06d" % \
                                     self._magdata))
                 if self._magdata < goodPhaseMagThreshold:
@@ -591,9 +595,11 @@ class MSA:
                     oldPhase = self._phasedata
                     self.invPhase = 1 - self.invPhase
                     self._CommandPhaseOnly()
-                    self.LogEvent("CaptureOneStep phase delay")
+                    if 0:
+                        self.LogEvent("CaptureOneStep phase delay")
                     cb.msWait(200)
-                    self.LogEvent("CaptureOneStep phase reread")
+                    if 0:
+                        self.LogEvent("CaptureOneStep phase reread")
                     cb.ReqReadADCs(16)
                     cb.FlushRead()
                     cb.Flush()
@@ -607,7 +613,7 @@ class MSA:
 
             else:
                 self.LogEvent("CaptureOneStep synth, f=%g" % f)
-                self._InputSynth(f)
+                self._InputSynth(f) # JGH syndutHook4
                 #invPhase = 0
                 cb.msWait(self.wait)
                 # sleep for 1 ms to give GUI a chance to catch up on key events
@@ -894,9 +900,6 @@ class MSA:
 
     def CreateSweepArray(self): # aka GEORGE
         global cb
-        if 1:
-            print(">>>2975<<< Creating GEORGE, the SweepArray")
-        
         SweepArray = []
        
         #p = self.frame.prefs
@@ -934,7 +937,7 @@ class MSA:
                 # shift next bit into position
                 DDS3bits >>= 1; PLL3bits <<= 1; DDS1bits >>= 1; PLL1bits <<= 1
             SweepArray.append(byteList)
-        if 1:
+        if 0:
             print(">>>3015<<< arraySweeper finished with length: ", len(SweepArray))
 
         #step1k = self.step1k ; step2k =self.step2k

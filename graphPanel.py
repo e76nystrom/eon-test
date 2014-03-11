@@ -9,7 +9,7 @@ from msa import MSA
 from marker import Marker
 from util import MHz, ns, si, SI_NO,StdScale
 
-SetModuleVersion("graphPanel",("1.02","EON","03/11/2014"))
+SetModuleVersion("graphPanel",("1.01","JGH.a","3/9/2014"))
 
 #==============================================================================
 # A graph of a set of traces.
@@ -461,7 +461,7 @@ class GraphPanel(wx.Panel):
             ##dc.DrawText("RBW=%sHz" % (p.rbw * kHz), xinfo, yinfo + 1*dyText)
             dc.DrawText("RBW=%.1fkHz" % p.rbw, xinfo, yinfo + 1*dyText)
             dc.DrawText("Wait=%dms" % int(p.wait), xinfo, yinfo + 2*dyText)
-            dc.DrawText("Steps=%d" % p.nSteps, xinfo, yinfo + 3*dyText)
+            dc.DrawText("Steps=%d" % int(p.nSteps), xinfo, yinfo + 3*dyText)
             y = 4
             if not p.isLogF:
                 df = (p.fStop - p.fStart) / p.nSteps
@@ -610,10 +610,12 @@ class GraphPanel(wx.Panel):
 ##            if not isWin:
                 # GraphicsContext: faster and smoother (but broken in Windows?)
                 gc = wx.GraphicsContext.Create(dc)
-                eraseWidth = 0
-                if tr.isMain and self.eraseOldTrace and trdh > 0:
+##                eraseWidth = 0
+                if tr.isMain and self.eraseOldTrace and trdh > 0 and p.bGap == True:
                     # remove main line segs at the cursor to form a moving gap
                     eraseWidth = int(10./(trdh*dx)) + 1
+                else:
+                    eraseWidth = 0
                 path = gc.CreatePath()
                 path.MoveToPoint(x[0], y[0])
                 for i in range(1, len(x)):
@@ -642,10 +644,12 @@ class GraphPanel(wx.Panel):
                 xy = concatenate((x.reshape(-1, 1), y.reshape(-1, 1)), axis=1)
                 xpyp = concatenate(([[0,0]], xy[:-1]))
                 lines = concatenate((xpyp, xy), axis=1)[1:]
-                if tr.isMain and self.eraseOldTrace and trdh > 0:
+                if tr.isMain and self.eraseOldTrace and trdh > 0 and p.bGap == True:
                     # remove main line segs at the cursor to form a moving gap
                     eraseWidth = int(10./(trdh*dx)) + 1
-                    lines = concatenate((lines[:self.cursorStep],
+                else:
+                    erasewidth = 0
+                lines = concatenate((lines[:self.cursorStep],
                                          lines[self.cursorStep+eraseWidth:]))
 ##                if isPhase:
 ##                    # remove phase line segments that wrap or have feeble mag

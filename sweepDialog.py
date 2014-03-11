@@ -7,7 +7,7 @@ from util import StartStopToCentSpan, CentSpanToStartStop
 from stepAtten import SetStepAttenuator
 from theme import DarkTheme, LightTheme
 
-SetModuleVersion("sweepDialog",("1.03","EON","03/11/2014"))
+SetModuleVersion("sweepDialog",("1.0","JGH.a","3/11/2014"))
 
 debug = False
 
@@ -30,49 +30,49 @@ class SweepDialog(wx.Dialog):
         self.sizerH = sizerH = wx.BoxSizer(wx.HORIZONTAL)
         sizerV1 = wx.BoxSizer(wx.VERTICAL)
 
-        # Mode selection
-        sizerV1.Add(wx.StaticText(self, -1, "Data Mode"), 0)
-        samples = ["0(Normal Operation)", "1(Graph Mag Cal)",
-                   "2(Graph Freq Cal)", "3(Graph Noisy Sine)",
-                   "4(Graph 1MHz Peak)"]
-        cm = wx.ComboBox(self, -1, samples[0], (0, 0), (160, -1), samples)
-        self.dataModeCM = cm
-        cm.Enable(False)
-        sizerV1.Add(cm, 0, 0)
+        # Mode selection # Commented out by JGH 3/8/14
+##        sizerV1.Add(wx.StaticText(self, -1, "Data Mode"), 0)
+##        samples = ["0(Normal Operation)", "1(Graph Mag Cal)",
+##                   "2(Graph Freq Cal)", "3(Graph Noisy Sine)",
+##                   "4(Graph 1MHz Peak)"]
+##        cm = wx.ComboBox(self, -1, samples[0], (0, 0), (160, -1), samples)
+##        self.dataModeCM = cm
+##        cm.Enable(False)
+##        sizerV1.Add(cm, 0, 0)
 
         # Create list of Final RBW Filters
         self.finFiltSamples = samples = []
         i = 1
         for freq, bw in msa.RBWFilters:
-##            samples.append("P%d-%s-%s" % (i, gstr(freq), gstr(bw))) # JGH 1/30/14
             samples.append("P%d  %sKHz BW" % (i, gstr(bw))) # JGH 2/16/14
             i += 1
 
-        sizerV1.Add(wx.StaticText(self, -1, "Final RBW Filter Path:"), 0)
-        ##s = p.indexRBWSel  # JGH added Oct24
-        ##cm = wx.ComboBox(self, -1, samples[s], (0, 0), (160, -1), samples) # JGH changed to samples[s] from samples[0]
-        cm = wx.ComboBox(self, -1, samples[0], (0, 0), (160, -1), samples)
-        self.RBWPathCM = cm
-        sizerV1.Add(cm, 0, 0)
+        sizerV1.Add(wx.StaticText(self, -1, "Final RBW Filter Path"), 0)
+
+        self.RBWPath = cm1 = wx.ComboBox(self, -1, samples[0], (0, 0), \
+                                         (160, -1), samples)
+        sizerV1.Add(cm1, 0, wx.ALIGN_LEFT, 0)
 
         # Video Filters
-        sizerV1.Add(wx.StaticText(self, -1, "Video Filter / BW"), 0)
-##        samples = ["Wide", "Medium", "Narrow", "XNarrow"]  # JGH added XNarrow
+        sizerV1.Add(wx.StaticText(self, -1, "Video Filters"), 0)
+        # samples = ["Wide", "Medium", "Narrow", "XNarrow"]
         samples = msa.vFilterNames
-        cm = wx.ComboBox(self, -1, samples[2], (0, 0), (120, -1), samples)
-        cm.Enable(True)
-        cm.SetSelection(p.vFilterSelIndex)
-        self.Bind(wx.EVT_COMBOBOX, self.AdjAutoWait, cm)
-        self.videoFiltCM = cm
-        sizerV1.Add(cm, 0, 0)
-
-        sizerV1.Add(wx.StaticText(self, -1, "Graph Appearance"), 0)
-        samples = ["Dark", "Light"]
-        cm = wx.ComboBox(self, -1, samples[0], (0, 0), (120, -1), samples)
-        self.graphAppearCM = cm
-        sizerV1.Add(cm, 0, 0)
+        self.videoFilt = cm2 = wx.ComboBox(self, -1, samples[2], (0, 0), (100, -1), samples)
+        cm2.SetSelection(p.vFilterSelIndex)
+        self.Bind(wx.EVT_COMBOBOX, self.calculateWait, cm2)
+        sizerV1.Add(cm2, 0, wx.ALIGN_LEFT, 0)
+        sizerV1.Add(wx.StaticText(self, -1, "Wait (ms)"), 0)
+        sizerV1H2 = wx.BoxSizer(wx.HORIZONTAL)
+        self.waitTB = tc = wx.TextCtrl(self, -1, str(p.wait), size=(50, -1))
+        self.Bind(wx.EVT_TEXT, self.setWaitTB, tc)
+        tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
+        sizerV1H2.Add(tc, 0, c)
+        self.autoWaitCB = chk4 = wx.CheckBox(self, -1, "Auto Wait")
+        chk4.Bind(wx.EVT_CHECKBOX, self.configAutoWait)
+        sizerV1H2.Add(chk4, 0, c|wx.LEFT, 10)
+        sizerV1.Add(sizerV1H2, 0, wx.ALIGN_LEFT, 0)
         sizerH.Add(sizerV1, 0, wx.ALL, 10)
-
+        
         sizerV2 = wx.BoxSizer(wx.VERTICAL)
         if 0:
             # these aren't implemented yet
@@ -88,17 +88,14 @@ class SweepDialog(wx.Dialog):
             chk.Enable(False)
             sizerV2.Add(chk, 0, wx.BOTTOM, 10)
 
-        ##self.atten5CB = cb = wx.CheckBox(self, -1, "Attenuate 5dB")
-        ##sizerV2.Add(cb, 0, wx.BOTTOM, 10)
+        self.atten5CB = cb = wx.CheckBox(self, -1, "Attenuate 5dB")
+        sizerV2.Add(cb, 0, wx.BOTTOM, 10)
 
-        st = wx.StaticText(self, -1, "Step Attenuator")
-        sizerV2.Add(st, 0, c|wx.TOP, 4)
-
+        sizerV2.Add(wx.StaticText(self, -1, "Step Attenuator"), 0, c|wx.TOP)
         sizerH2 = wx.BoxSizer(wx.HORIZONTAL)
         sizerH2.Add(wx.StaticText(self, -1, "  "), 0, c|wx.RIGHT, 2)
-        tc2 = wx.TextCtrl(self, -1, str(p.stepAttenDB), size=(40, -1))
-        self.stepAttenBox = tc2
-        sizerH2.Add(tc2, 0, 0)
+        self.stepAttenBox = tc1 = wx.TextCtrl(self, -1, str(p.stepAttenDB), size=(40, -1))
+        sizerH2.Add(tc1, 0, 0)
         sizerH2.Add(wx.StaticText(self, -1, "dB"), 0, c|wx.LEFT, 2)
         sizerV2.Add(sizerH2, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL, 2)
 
@@ -119,12 +116,12 @@ class SweepDialog(wx.Dialog):
         freqSizer.Add(rb, (0, 0), (2, 1), 0, 0)
         cl = wx.ALIGN_CENTER|wx.LEFT
         cr = wx.ALIGN_CENTER|wx.RIGHT
-        freqSizer.Add(wx.StaticText(self, -1, "Cent"), (0, 1), (1, 1), 0, cr,2)
+        freqSizer.Add(wx.StaticText(self, -1, "Cent"), (0, 1), (1, 1), 0, cr, 2)
         self.centBox = tc = wx.TextCtrl(self, -1, "", size=(80, -1))
         freqSizer.Add(tc, (0, 2), (1, 1), 0, 0)
         self.Bind(wx.EVT_TEXT, self.AdjFreqTextBoxes, tc)
         tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
-        freqSizer.Add(wx.StaticText(self, -1, "MHz"), (0, 3), (1, 1), 0, cl,2)
+        freqSizer.Add(wx.StaticText(self, -1, "MHz"), (0, 3), (1, 1), 0, cl, 2)
         freqSizer.Add(wx.StaticText(self, -1, "Span"), (1, 1), (1, 1), cr, 2)
         self.spanBox = tc = wx.TextCtrl(self, -1, "", size=(80, -1))
         freqSizer.Add(tc, (1, 2), (1, 1), 0, 0)
@@ -134,13 +131,13 @@ class SweepDialog(wx.Dialog):
         self.startstopRB = rb = wx.RadioButton(self, -1, "")
         self.Bind(wx.EVT_RADIOBUTTON, self.AdjFreqTextBoxes, rb)
         freqSizer.Add(rb, (0, 4), (2, 1), wx.LEFT, 5)
-        freqSizer.Add(wx.StaticText(self, -1, "Start"), (0, 5), (1, 1), 0,cr,2)
+        freqSizer.Add(wx.StaticText(self, -1, "Start"), (0, 5), (1, 1), 0,cr, 2)
         self.startBox = tc = wx.TextCtrl(self, -1, "", size=(80, -1))
         freqSizer.Add(tc, (0, 6), (1, 1), 0, 0)
         self.Bind(wx.EVT_TEXT, self.AdjFreqTextBoxes, tc)
         tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
         freqSizer.Add(wx.StaticText(self, -1, "MHz"), (0, 7), (1, 1), 0, cl, 2)
-        freqSizer.Add(wx.StaticText(self, -1, "Stop"), (1, 5), (1, 1), 0, cr,2)
+        freqSizer.Add(wx.StaticText(self, -1, "Stop"), (1, 5), (1, 1), 0, cr, 2)
         self.stopBox = tc = wx.TextCtrl(self, -1, "", size=(80, -1))
         freqSizer.Add(tc, (1, 6), (1, 1), 0, 0)
         self.Bind(wx.EVT_TEXT, self.AdjFreqTextBoxes, tc)
@@ -151,29 +148,24 @@ class SweepDialog(wx.Dialog):
 
         # other sweep parameters
         sizerH3 = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizerH3V1 = wx.BoxSizer(wx.VERTICAL)
-        self.sizerH3V1.Add(wx.StaticText(self, -1, "Steps/Sweep"), 0, wx.TOP, 5)
+        sizerH3V1 = wx.BoxSizer(wx.VERTICAL)
+        sizerH3V1.Add(wx.StaticText(self, -1, "Steps/Sweep"), 0, wx.TOP, 5)
         sizerH3V1H1 = wx.BoxSizer(wx.HORIZONTAL)
-        tc = wx.TextCtrl(self, -1, str(p.nSteps), size=(50, -1))
-        self.stepsBox = tc
+        self.stepsTB = tc = wx.TextCtrl(self, -1, str(p.nSteps), size=(50, -1))
+        self.Bind(wx.EVT_TEXT, self.setStepsTB, tc)
         tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
         sizerH3V1H1.Add(tc, 0, c)
-        self.continCB = chk = wx.CheckBox(self, -1, "Continuous")
-        sizerH3V1H1.Add(chk, 0, c|wx.LEFT, 10)
-        self.sizerH3V1.Add(sizerH3V1H1, 0, 0)
-        self.sizerH3V1.Add(wx.StaticText(self, -1, "Wait (ms)"), 0, wx.TOP, 5)
-        sizerH3V1H2 = wx.BoxSizer(wx.HORIZONTAL)
-        self.waitBox = tc = wx.TextCtrl(self, -1, str(p.wait), size=(50, -1))
-        tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
-        sizerH3V1H2.Add(tc, 0, c)
-        self.autoWaitCB = chk = wx.CheckBox(self, -1, "Auto Wait")
-        chk.Enable(True)
-        chk.Bind(wx.EVT_CHECKBOX, self.configAutoWait)
-        sizerH3V1H2.Add(chk, 0, c|wx.LEFT, 10)
-        self.sizerH3V1.Add(sizerH3V1H2, 0, 0)
-        sizerH3.Add(self.sizerH3V1, 0, 0)
+        self.continCB = chk3 = wx.CheckBox(self, -1, "Continuous")
+        sizerH3V1H1.Add(chk3, 0, c|wx.LEFT, 10)
+        sizerH3V1.Add(sizerH3V1H1, 0, 0)
 
-        self.sizerH3V2 = wx.BoxSizer(wx.VERTICAL) # JGH 11/25/2013
+        sizerH3V1.Add(wx.StaticText(self, -1, "Graph Appear"), 0)
+        samples = ["Dark", "Light"]
+        self.graphAppear = cm3 = wx.ComboBox(self, -1, samples[1], (0, 0), (100, -1), samples)
+        sizerH3V1.Add(cm3, 0, wx.ALIGN_LEFT, 0)
+        sizerH3.Add(sizerH3V1, 0, 0)
+
+        sizerH3V2 = wx.BoxSizer(wx.VERTICAL) # JGH 11/25/2013
         sweepBoxTitle = wx.StaticBox(self, -1, "Sweep")
         sweepSizer = wx.StaticBoxSizer(sweepBoxTitle, wx.VERTICAL)
         sweepH1Sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -193,10 +185,15 @@ class SweepDialog(wx.Dialog):
         self.alternateRB = rb = wx.RadioButton(self, -1, "Alternate")
         sweepH2Sizer.Add(rb, 0, 0)
         sweepSizer.Add(sweepH2Sizer, 0, 0)
-##        sizerH3.Add(sweepSizer, 0, wx.LEFT|wx.TOP, 10)
-        self.sizerH3V2.Add(sweepSizer, 0, wx.LEFT|wx.TOP, 10) # JGH 11/25/2013
-        sizerH3.Add(self.sizerH3V2, 0, 0) # JGH 11/25/2013
+        sizerH3V2.Add(sweepSizer, 0, wx.LEFT|wx.TOP, 10) # JGH 11/25/2013
+        self.traceBlankCB = chk2 = wx.CheckBox(self, -1, "Trace Blanking")
+        self.Bind(wx.EVT_CHECKBOX, self.TraceBlanking, chk2)
+        sizerH3V2.Add(chk2, 0, wx.ALIGN_CENTER, 0)
+        
+        sizerH3.Add(sizerH3V2, 0, 0) # JGH 11/25/2013
         sizerV3.Add(sizerH3, 0, 0)
+        self.sizerH3V1 = sizerH3V1
+        self.sizerH3V2 = sizerH3V2
 
         # Apply, Cancel, and OK buttons
         sizerV3.Add((0, 0), 1, wx.EXPAND)
@@ -233,12 +230,8 @@ class SweepDialog(wx.Dialog):
 
         # get current parameters from prefs
         self.SetSizer(sizerH)
-        if debug:
-            print (">>>>6610<<<< SweepDialog goes to UpdateFromPrefs")
         self.UpdateFromPrefs()
         (self.startBox, self.centBox)[p.isCentSpan].SetFocus()
-        if debug:
-            print (">>>>6614<<<< SweepDialog complete")
 
     #--------------------------------------------------------------------------
     # Update all controls to current prefs.
@@ -252,15 +245,19 @@ class SweepDialog(wx.Dialog):
 
 ##        self.dataModeCM.SetValue(p.get("dataMode", "0(Normal Operation)"))
 
-        self.RBWPathCM.SetValue(self.finFiltSamples[p.indexRBWSel])
+        self.RBWPath.SetValue(self.finFiltSamples[p.indexRBWSel])
         # JGH: Get RBW switch bits (Correspond directly to msa.indexRBWSel)
         self.switchRBW = p.indexRBWSel
 
         # JGH: Get Video switch bits  (= vFilterSelIndex)
-        self.vFilterSelName = p.vFilterSelName = self.videoFiltCM.GetValue()
+        self.vFilterSelName = p.vFilterSelName = self.videoFilt.GetValue()
         self.vFilterSelIndex = p.vFilterSelIndex = msa.vFilterNames.index(p.vFilterSelName)
 
-        self.graphAppearCM.SetValue(p.get("graphAppear", "Light"))
+        self.graphAppear.SetValue(p.get("graphAppear", "Light"))
+
+##        self.syntDataCB.SetValue(p.get("syntdata", True))
+        self.traceBlankCB.SetValue(p.get("bGap", True))
+            
 
         if 0:
             # these aren't implemented yet
@@ -284,7 +281,7 @@ class SweepDialog(wx.Dialog):
             if newMode == MSA.MODE_SA:
                 # Spectrum Analyzer mode
                 self.modeBoxTitle.SetLabel("Signal Generator")
-                sizerVM.Add(wx.StaticText(self, -1, "Sig Gen Freq"), ch, 0)
+##                sizerVM.Add(wx.StaticText(self, -1, "Sig Gen Freq"), ch, 0)
                 sizerH = wx.BoxSizer(wx.HORIZONTAL)
                 tc = wx.TextCtrl(self, -1, str(p.sigGenFreq), size=(80, -1))
                 self.sigGenFreqBox = tc
@@ -384,14 +381,13 @@ class SweepDialog(wx.Dialog):
         self.skip = tmp
 
         # other sweep parameters
-        self.stepsBox.SetValue(str(p.nSteps))
+        self.stepsTB.SetValue(str(p.nSteps))
         self.continCB.SetValue(p.get("continuous", False))
-        #self.waitBox.SetValue(str(p.wait))
         if self.autoWaitCB.GetValue() == False: # JGH 12/18/13
-            self.waitBox.SetValue(str(p.get("wait", 10)))
+            self.waitTB.SetValue(str(p.get("wait", 10)))
         else:
-            self.calculateWait
-            self.waitBox.SetValue(str(p.wait))
+            self.calculateWait()
+            self.autoWaitCB.SetValue(True)
 
         isLogF = p.get("isLogF", False)
         self.linearRB.SetValue(not isLogF)
@@ -403,48 +399,68 @@ class SweepDialog(wx.Dialog):
 
         self.AdjFreqTextBoxes(final=True)
         self.sizerH.Fit(self)
+        
+    #--------------------------------------------------------------------------
 
-        #--------------------------------------------------------------------------
+    def setStepsTB(self, event=None):
+        p = self.frame.prefs
+        p.nSteps = int(self.stepsTB.GetValue())
+
+    #--------------------------------------------------------------------------
+
+    def setWaitTB(self, event=None):
+        p = self.frame.prefs
+        p.wait = int(self.waitTB.GetValue())
+        
+    #--------------------------------------------------------------------------    
 
     def configAutoWait(self, event):  # JGH added this method
-        sender = event.GetEventObject()
         p = self.frame.prefs
-        if sender.GetValue() == True:
-            # Set the wait time to 10 x time constant of video filter
-            # With R=10K and C in uF, RC = C/100 secs and wait=C/10 secs = 100C msecs
-            self.calculateWait()
-        else:
-            # Set value = Leave in Wait box
-            p.wait = int(self.waitBox.GetValue())
-
-        #--------------------------------------------------------------------------
-
-    def calculateWait(self):    # JGH added this  method
-        global msa
-        p = self.frame.prefs
-        p.vFilterSelName = self.videoFiltCM.GetValue()
-        p.vFilterSelIndex = msa.vFilterNames.index(p.vFilterSelName)
-        p.wait = int(10 + 67 *(float(p.vFilterCaps[p.vFilterSelIndex][p.vFilterSelName][0])) ** 0.32)
-        self.waitBox.SetValue(str(p.wait))
-
-        #--------------------------------------------------------------------------
-
-    def AdjAutoWait(self, name):
         if self.autoWaitCB.GetValue() == True:
             self.calculateWait()
         else:
-            pass
+            self.waitTB.ChangeValue(str(p.wait))
+        
+        #--------------------------------------------------------------------------
+
+    def calculateWait(self, event=None):    # JGH added this  method
+        # Set the wait time to 10 x time constant of video filter
+        # With R=10K and C in uF, RC = C/100 secs and wait=C/10 secs = 100C msecs
+        p = self.frame.prefs
+        C = float(p.vFilterCaps[self.videoFilt.GetSelection()])
+        p.wait = int(100 * C) # msecs
+        if self.autoWaitCB.GetValue() == True:
+            self.waitTB.ChangeValue(str(p.wait))
 
         #--------------------------------------------------------------------------
 
     def SetDUTfwdrev(self, event):  # JGH added this method
         sender = event.GetEventObject()
         p = self.frame.prefs
-        p.DUTfwdrev = sender.GetValue()
+##        p.DUTfwdrev = sender.GetValue()
         if sender.GetValue() == 0:  # Forward
             p.switchFR = 0
         else:
             p.switchFR = 1  # Reverse
+
+    #--------------------------------------------------------------------------
+
+    def TraceBlanking(self, event):
+        sender = event.GetEventObject()
+        p = self.frame.prefs
+        if sender.GetValue() == 0:  # Do not use
+            p.bGap = False
+        else:
+            p.bGap = True  # Allow
+    #--------------------------------------------------------------------------
+    # Key focus changed.
+
+    def OnSetFocus(self, event):
+        tc = event.GetEventObject()
+        if isMac:
+            tc.SelectAll()
+        self.tcWithFocus = tc
+        event.Skip()
  
     #--------------------------------------------------------------------------
     # One Scan pressed- apply before scanning.
@@ -509,7 +525,7 @@ class SweepDialog(wx.Dialog):
         LogGUIEvent("Apply")
 ##        p.dataMode = self.dataModeCM.GetValue()
 
-        i = self.RBWPathCM.GetSelection()
+        i = self.RBWPath.GetSelection()
         # JGH added in case the SweepDialog is opened and closed with no action
         if i >= 0:
             msa.indexRBWSel = p.indexRBWSel = i
@@ -526,7 +542,7 @@ class SweepDialog(wx.Dialog):
 
         self.calculateWait
 
-        i = self.videoFiltCM.GetSelection()
+        i = self.videoFilt.GetSelection()
         if i>= 0:
             msa.vFilterSelIndex = p.vFilterSelIndex = i
 
@@ -544,7 +560,7 @@ class SweepDialog(wx.Dialog):
 ##
 ##        msa.bitsPulse = 128 * self.switchPulse
 
-        p.graphAppear = self.graphAppearCM.GetValue()
+        p.graphAppear = self.graphAppear.GetValue()
         p.theme = (DarkTheme, LightTheme)[p.graphAppear == "Light"]
         if 0:
             # these aren't implemented yet
@@ -566,22 +582,23 @@ class SweepDialog(wx.Dialog):
             p.planeExt += [floatOrEmpty(box.GetValue()) + p.planeExt[0] \
                            for box in self.planeExt2G3GBox]
         p.isCentSpan = self.centSpanRB.GetValue()
-        p.nSteps = int(self.stepsBox.GetValue())
+        p.nSteps = int(self.stepsTB.GetValue())
         p.continuous = self.continCB.GetValue()
+
 
         if self.autoWaitCB.GetValue() == True:   # JGH 11/27/13
             self.calculateWait()
-            self.waitBox.SetValue(str(p.wait))
+            self.waitTB.SetValue(str(p.wait))
             if debug:
                 print ("waitBox: ", self.waitBox.GetValue())
         else:
-            p.wait = int(self.waitBox.GetValue())
+            p.wait = int(self.waitTB.GetValue())
 #        if p.wait > 255:
 #            p.wait = 255
 #            self.waitBox.SetValue(str(p.wait))
         if p.wait < 0:
             p.wait = 0
-            self.waitBox.SetValue(str(p.wait))
+            self.waitTB.SetValue(str(p.wait))
 ##        p.autoWait = self.autoWaitCB.GetValue() #JGH 11/27/13 remmed out
 
         p.isLogF = self.logRB.GetValue()
@@ -608,16 +625,6 @@ class SweepDialog(wx.Dialog):
         frame.ReadCalPath()
         frame.ReadCalFreq()
         specP.FullRefresh()
-
-    #--------------------------------------------------------------------------
-    # Key focus changed.
-
-    def OnSetFocus(self, event):
-        tc = event.GetEventObject()
-        if isMac:
-            tc.SelectAll()
-        self.tcWithFocus = tc
-        event.Skip()
 
     #--------------------------------------------------------------------------
     # Close pressed- save parameters back in prefs and close window.

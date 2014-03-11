@@ -116,7 +116,6 @@ class SynDUTDialog(wx.Dialog):
     # DUT type changed: enable its subset of parameters.
 
     def OnType(self, event=None):
-        print ("onType")
         iType = self.sigTypeCB.GetSelection()
         parms = self.parms
         for i in range(len(parms)):
