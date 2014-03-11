@@ -1,7 +1,7 @@
 from msaGlobal import GetLO2, GetMsa, SetModuleVersion
 import wx
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("cavityFilter",("1.02","EON","03/11/2014"))
 
 #==============================================================================
     # CAVITY FILTER TEST # JGH 1/26/14

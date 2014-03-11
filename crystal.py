@@ -7,7 +7,7 @@ from msa import MSA
 from util import floatOrEmpty, gstr, MHz, Ohms, pF, si, uH
 from marker import Marker
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("crystal",("1.02","EON","03/11/2014"))
 
 #==============================================================================
 # The Crystal Analysis dialog box.

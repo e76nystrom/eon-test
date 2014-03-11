@@ -2,7 +2,7 @@ from msaGlobal import SetModuleVersion
 from msa_cb import MSA_CB
 from ctypes import windll
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("msa_cb_pc",("1.02","EON","03/11/2014"))
 
 #==============================================================================
 # USBPAR interface module connected to MSA CB parallel port.

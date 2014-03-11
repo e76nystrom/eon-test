@@ -4,7 +4,7 @@ import os
 import wx.grid
 from util import gstr, mu
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("configDialog",("1.02","EON","03/11/2014"))
 
 #==============================================================================
 # The MSA/VNA Configuration Manager dialog box (also modal) # JGH

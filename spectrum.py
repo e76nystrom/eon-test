@@ -4,7 +4,7 @@ from numpy import array, isnan, select, zeros
 from events import LogGUIEvent
 from util import MHz, siScale
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("spectrum",("1.02","EON","03/11/2014"))
 
 #==============================================================================
 # Holder of the parameters and results of one scan.
@@ -14,7 +14,8 @@ class Spectrum:
         # Start EON Jan 10 2014
         self.isLogF = (Fmhz[0] + Fmhz[2])/2 != Fmhz[1]
         self.desc = "%s, Path %d, %d %s steps, %g to %g MHz." % \
-            (when, pathNo, nSteps, ("linear", "log")[self.isLogF], fStart, fStop)
+            (when, pathNo, nSteps, ("linear", "log")[self.isLogF], \
+            fStart, fStop)
         # End EON Jan 10 2014
         self.nSteps = nSteps        # number of steps in scan
         self.Fmhz = Fmhz            # array of frequencies (MHz), one per step

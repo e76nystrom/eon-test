@@ -3,7 +3,7 @@ import wx
 from numpy import mod
 from msa import MSA
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("pdmCal",("1.02","EON","03/11/2014"))
 
 #==============================================================================
 # The PDM Calibration dialog box.

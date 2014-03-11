@@ -3,7 +3,7 @@ import wx
 from msa import MSA
 from util import divSafe
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("ddsTest",("1.02","EON","03/11/2014"))
 
 #==============================================================================
 # The Special Tests dialog box # JGH Substantial mod on 1/25/14

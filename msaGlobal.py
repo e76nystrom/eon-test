@@ -8,7 +8,7 @@ def SetModuleVersion(name, version):
     print (name, version)
     ModuleInfo[name] = version
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("msaGlobal",("1.02","EON","03/11/2014"))
 
 logEvents = False
 

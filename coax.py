@@ -6,7 +6,7 @@ from util import constMaxValue, floatSI, polarDbDeg, message
 from functionDialog import FunctionDialog
 from marker import Marker
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("coax",("1.02","EON","03/11/2014"))
 
 #==============================================================================
 # The Coax Parameters dialog box.

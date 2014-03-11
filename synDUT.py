@@ -1,4 +1,4 @@
-from msaGlobal import GetMsa, isMac, SetHardwarePresent, \
+from msaGlobal import GetHardwarePresent, GetMsa, isMac, SetHardwarePresent, \
     SetModuleVersion
 import wx
 from numpy import angle, arange, cos, exp, \
@@ -9,7 +9,7 @@ from msa import MSA
 from util import db, floatOrEmpty, floatSI, EquivS11FromS21, \
     modDegree, si, SI_ASCII, fF, kHz, GHz, mH, MHz, Ohms, pF, pH
 
-SetModuleVersion(__name__,("1.02","03/10/2014"))
+SetModuleVersion("synDUT",("1.04","EON","03/11/2014"))
 
 debug = False        # set True to write debugging messages to msapy.log
 
@@ -21,6 +21,7 @@ class SynDUTDialog(wx.Dialog):
     def __init__(self, frame):
         global msa
         msa = GetMsa()
+        self.hardwarePresent = GetHardwarePresent()
         self.frame = frame
         self.prefs = p = frame.prefs
         framePos = frame.GetPosition()
@@ -37,8 +38,8 @@ class SynDUTDialog(wx.Dialog):
         choices = ["Tones", "Square", "RLC", "Crystal", "Cheb Filter",
                     "Through", "Shunt Open", "Shunt Short", "Shunt Load"]
         dutType = p.get("syndutType", "Tones")
-        self.sigTypeCB = cbox = wx.ComboBox(self, -1, dutType, (0, 0), (120, -1),
-                                            choices)
+        self.sigTypeCB = cbox = wx.ComboBox(self, -1, dutType, (0, 0), \
+                                            (120, -1), choices)
         self.Bind(wx.EVT_COMBOBOX, self.OnType, cbox)
         sizerV.Add(cbox, 0, c|wx.ALL, 10)
 
@@ -115,6 +116,7 @@ class SynDUTDialog(wx.Dialog):
     # DUT type changed: enable its subset of parameters.
 
     def OnType(self, event=None):
+        print ("onType")
         iType = self.sigTypeCB.GetSelection()
         parms = self.parms
         for i in range(len(parms)):
@@ -136,7 +138,7 @@ class SynDUTDialog(wx.Dialog):
     # Save current preferences on closing.
 
     def Close(self, event=None):
-        global cb
+        global cb, msa
         p = self.prefs
         p.syndutType = self.type
         p.syndutWinPos = self.GetPosition().Get()
@@ -151,8 +153,9 @@ class SynDUTDialog(wx.Dialog):
         p.syndutShuntRLCEn = self.shuntRLCEn.GetValue()
 
         # deselect syndut, leaving nothing for input
-        msa.syndut = None
-        SetHardwarePresent(True)
+        if self.hardwarePresent:
+            msa.syndut = None
+        SetHardwarePresent(self.hardwarePresent)
         if event:
             event.Skip()
 
@@ -160,7 +163,8 @@ class SynDUTDialog(wx.Dialog):
     # Adjust magnitudes in dBm and phases in degrees, pre-uncorrecting ADC.
 
     def AdjustMag(self, magDbm):
-        magVp = 10**(magDbm/20) * self.vsrmw
+        global msa
+        magVp = 10**(magDbm/20.0) * self.vsrmw
         if len(msa.magTableADC) > 0:
             # use the ADC linearity table backwards to pre-uncorrect
             magADC = interp(magDbm, msa.magTableDBm, msa.magTableADC)
@@ -168,10 +172,10 @@ class SynDUTDialog(wx.Dialog):
             # given a linear estimate gain:
             #   mag = (self._magdata / 65536. - 0.5) * 200.
             # use the estimate backwards to uncorrect
-            magADC = ((magDbm / 200) + 0.5) * 65536
+            magADC = ((magDbm / 200.0) + 0.5) * 65536
         # scale ADC values to rough dBm to keep exponent in range
-        magADCdB = magADC/300 - 100
-        magVpAdj = 10**(magADCdB/20) * self.vsrmw
+        magADCdB = magADC/300.0 - 100
+        magVpAdj = 10**(magADCdB/20.0) * self.vsrmw
         ##print ("magDbm=", magDbm[0], "magVp=", magVp[0], "magADC=", magADC[0],
         ##      "magVpAdj=", magVpAdj[0]
         if magVpAdj == None:
@@ -191,7 +195,7 @@ class SynDUTDialog(wx.Dialog):
     # Generate synthetic data for spectrum test.
 
     def GenSynthInput(self, event=None):
-        ##print ("Generating synthetic data for spectrum test"
+        print ("Generating synthetic data for spectrum test")
         self.type = sigType = self.sigTypeCB.GetValue()
 
         for parmRows in self.parms:
@@ -199,7 +203,7 @@ class SynDUTDialog(wx.Dialog):
                 setattr(self, name, self.parmBoxes[name].GetValue())
         p = self.prefs
         # volts peak per sqrt mW for 50 ohm
-        self.vsrmw = sqrt(50/1000) * sqrt(2)
+        self.vsrmw = sqrt(50.0/1000.0) * sqrt(2.0)
         self.msaInputDbm = -20
         self.noiseFloor = 10**(float(self.noisedbm)/20)
         serRLCEn = self.serRLCEn.GetValue()
@@ -386,8 +390,8 @@ class SynDUTDialog(wx.Dialog):
         # Vp to rough dBm, then unscale to get ADC values again
         self.synSpecM = (db(abs(synSpecVp)/self.vsrmw) + 100) * 300
         synSpecP = angle(synSpecVp, deg=True)
-        self.synSpecP = self.AdjustPhase(self.synSpecM, synSpecP) / 360 * \
-                    65536
+        self.synSpecP = self.AdjustPhase(self.synSpecM, synSpecP) / 360.0 * \
+                    65536.0
 
 # Conditionally form a parallel circuit with elements in list.
 

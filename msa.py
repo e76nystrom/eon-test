@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion(__name__,("1.04","03/10/2014"))
+SetModuleVersion("msa",("1.06","EON","03/11/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise

@@ -5,7 +5,7 @@ from msa import MSA
 from util import floatOrEmpty, gstr, Ohms
 from marker import Marker
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("functionDialog",("1.02","EON","03/11/2014"))
 
 #==============================================================================
 # Base class for main dialog boxes.

@@ -1,7 +1,7 @@
 from msaGlobal import SetModuleVersion
 from util import message, msWait
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("msa_cb",("1.02","EON","03/11/2014"))
 
 debug = False
 

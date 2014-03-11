@@ -6,7 +6,7 @@ from functionDialog import FunctionDialog
 from crystal import CrystalParameters
 from util import MHz, Ohms,  ParallelRLCFromScalarS21, pF, si, uH
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("rlc",("1.02","EON","03/11/2014"))
 
 #==============================================================================
 # The RLC Analysis dialog box.

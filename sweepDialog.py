@@ -7,7 +7,7 @@ from util import StartStopToCentSpan, CentSpanToStartStop
 from stepAtten import SetStepAttenuator
 from theme import DarkTheme, LightTheme
 
-SetModuleVersion(__name__,("1.01","03/10/2014"))
+SetModuleVersion("sweepDialog",("1.03","EON","03/11/2014"))
 
 debug = False
 

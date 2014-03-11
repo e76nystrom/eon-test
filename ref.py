@@ -7,7 +7,7 @@ from util import floatOrEmpty
 from msa import MSA
 from spectrum import Spectrum
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("ref",("1.02","EON","03/11/2014"))
 
 debug = False
 

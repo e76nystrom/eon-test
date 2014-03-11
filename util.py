@@ -5,7 +5,7 @@ from math import cos, floor, sin, sqrt, tan
 from numpy import angle, exp, Inf, isnan, log10, mean, mod
 from numpy import nan_to_num, pi, select, seterr, std
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("util",("1.02","EON","03/11/2014"))
 
 # Set to truncate S11 to the unity circle to ignore error due to S21
 # measurement losses during calibrating

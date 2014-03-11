@@ -66,8 +66,8 @@ print("sys.platform: ", sys.platform)
 
 import msaGlobal
 from msaGlobal import appdir, EVT_UPDATE_GRAPH, GetLO1, GetLO3, incremental, \
-    isMac, isWin, msPerUpdate, resdir, SetFontSize, \
-    SetHardwarePresent, SetVersion, slowDisplay, winUsesParallelPort
+    isMac, isWin, msPerUpdate, resdir, SetFontSize, SetHardwarePresent, \
+    SetModuleVersion, SetVersion, slowDisplay, winUsesParallelPort
 import os, re, string, time, threading, wx
 import copy as dcopy
 import numpy.version
@@ -83,6 +83,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
+SetModuleVersion("msapy",("1.02","EON","03/11/2014"))
 SetVersion(version)
 
 msa = None
@@ -1245,6 +1246,7 @@ class MSASpectrumFrame(wx.Frame):
             msa.syndut = SynDUTDialog(self)
         else:
             msa.syndut.Raise()
+        msa.syndut.Show(True)
 
     #--------------------------------------------------------------------------
     # Open the Sweep modeless dialog box.

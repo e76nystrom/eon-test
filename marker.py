@@ -3,7 +3,7 @@ import re, warnings
 from numpy import arange, interp, isnan, log10, \
     poly1d, polyfit, RankWarning
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("marker",("1.02","EON","03/11/2014"))
 
 prt = False
 

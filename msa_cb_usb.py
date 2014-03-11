@@ -4,7 +4,7 @@ import os, string, subprocess, sys, usb
 from msa_cb import MSA_CB
 import array as uarray
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("msa_cb_usb",("1.02","EON","03/11/2014"))
 
 debug = False
 

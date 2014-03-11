@@ -1,7 +1,7 @@
 from msaGlobal import GetCb, SetModuleVersion
 import wx
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("ctlBrdTests",("1.02","EON","03/11/2014"))
 
 #==============================================================================
 # The Control Board Tests modeless dialog window.

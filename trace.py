@@ -10,7 +10,7 @@ from util import angle
 from util import db
 from msa import MSA
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("trace",("1.02","EON","03/11/2014"))
 
 def SetMsa(val):
     global msa
@@ -447,14 +447,15 @@ class S11Trace(Trace):
             self.Sdeg[i] = 180*angle(S11)/pi
  
         self.S11[i] = S11
-        save = seterr(all="ignore")
         self.Zs[i] = Zs = msa.fixtureR0 * (1 + S11) / (1 - S11)
         # Zp is equivalent parallel impedance to Zs
         mag2 = Zs.real**2 + Zs.imag**2
         self.Zs[i] = nan_to_num(self.Zs[i])
-        self.Zp[i] = mag2/Zs.real + 1j*mag2/Zs.imag
+        try:
+            self.Zp[i] = mag2/Zs.real + 1j*mag2/Zs.imag
+        except ZeroDivisionError:
+            self.Zp[i] = 0
         self.Zp[i] = nan_to_num(self.Zp[i])
-        seterr(**save)
         self.w[i] = 2*pi*spec.f[i]*MHz
 
 class CapTrace(S11Trace):

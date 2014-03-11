@@ -8,7 +8,7 @@ from msa import MSA
 from functionDialog import MainDialog
 from spectrum import Spectrum
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("cal",("1.02","EON","03/11/2014"))
 
 calWait = 50 # sweep wait during calibration # EON Jan 29, 2014
 

@@ -8,7 +8,7 @@ from msa import MSA
 from util import fF, floatOrEmpty, kOhm, mH, MHz, mOhm, nF, nH, Ohms, pF, pH, si, uF, uH
 from util import SeriesJigImpedance, ShuntJigImpedance, EquivParallelImped
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("componentMeter",("1.02","EON","03/11/2014"))
 
 #==============================================================================
 # The Component Meter dialog box.

@@ -5,7 +5,7 @@ from numpy import isfinite
 from trace import traceTypesLists
 from util import floatSI, si, SI_ASCII, StdScale
 
-SetModuleVersion(__name__,("1.0","3/6/2014"))
+SetModuleVersion("vScale",("1.02","EON","03/11/2014"))
 
 #==============================================================================
 # The Vertical Scale Parameters dialog window.
