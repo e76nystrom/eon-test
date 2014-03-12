@@ -9,7 +9,7 @@ from msa import MSA
 from util import db, floatOrEmpty, floatSI, EquivS11FromS21, \
     modDegree, si, SI_ASCII, fF, kHz, GHz, mH, MHz, Ohms, pF, pH
 
-SetModuleVersion("synDUT",("1.04","EON","03/11/2014"))
+SetModuleVersion("synDUT",("1.05","EON","03/12/2014"))
 
 debug = False        # set True to write debugging messages to msapy.log
 
@@ -21,7 +21,10 @@ class SynDUTDialog(wx.Dialog):
     def __init__(self, frame):
         global msa
         msa = GetMsa()
+        if msa.IsScanning():
+            msa.StopScan()
         self.hardwarePresent = GetHardwarePresent()
+        SetHardwarePresent(False)
         self.frame = frame
         self.prefs = p = frame.prefs
         framePos = frame.GetPosition()
@@ -151,12 +154,15 @@ class SynDUTDialog(wx.Dialog):
         p.syndutSerRLCEn = self.serRLCEn.GetValue()
         p.syndutShuntRLCEn = self.shuntRLCEn.GetValue()
 
-        # deselect syndut, leaving nothing for input
-        if self.hardwarePresent:
-            msa.syndut = None
-        SetHardwarePresent(self.hardwarePresent)
         if event:
             event.Skip()
+        SetHardwarePresent(self.hardwarePresent)
+        # deselect syndut, leaving nothing for input
+        if self.hardwarePresent or not p.syntData:
+            if msa.IsScanning():
+                msa.StopScan()
+            msa.syndut = None
+            self.Destroy()
 
     #--------------------------------------------------------------------------
     # Adjust magnitudes in dBm and phases in degrees, pre-uncorrecting ADC.

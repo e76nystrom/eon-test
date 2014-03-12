@@ -1,10 +1,11 @@
 from msaGlobal import appdir, GetLO1, GetLO3, GetModuleInfo, GetMsa, \
-    isMac, isWin, SetModuleVersion
-import os
+    isMac, isWin, resdir, SetCb, SetModuleVersion, winUsesParallelPort
+import os, sys
 import wx.grid
+from wx.lib.dialogs import ScrolledMessageDialog
 from util import gstr, mu
 
-SetModuleVersion("configDialog",("1.0","JGH.a","3/8/2014"))
+SetModuleVersion("configDialog",("1.01","EON","03/12/2014"))
 
 #==============================================================================
 # The MSA/VNA Configuration Manager dialog box (also modal) # JGH
@@ -13,6 +14,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
     def __init__(self, frame):
         self.frame = frame
         self.prefs = p = frame.prefs
+        global msa
         msa = GetMsa()
         pos = p.get("configWinPos", wx.DefaultPosition)
         wx.Dialog.__init__(self, frame, -1, "MSA/VNA Configuration Manager",
@@ -202,7 +204,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         btn = wx.Button(self, wx.ID_CANCEL)
         sizerG1.Add(btn, (16,1), flag=c)
         btn = wx.Button(self, wx.ID_OK)
-        btn.SetDefault()
+        btn.Bind(wx.EVT_BUTTON, self.OnOk)
         sizerG1.Add(btn, (16,2), flag=c)
 
         sizerH0.Add(sizerG1, 0, wx.ALL, 10)
@@ -288,7 +290,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         sizerG2B.Add(cm, (0, 1), flag=cv)
 
         self.syntDataCB = chk1 = wx.CheckBox(self, -1, "Use Synthetic Data")
-        self.Bind(wx.EVT_CHECKBOX, self.AllowSyntData, chk1)
+#        self.Bind(wx.EVT_CHECKBOX, self.AllowSyntData, chk1)
         self.syntDataCB.SetValue(p.get("syntData", True))
         sizerG2B.Add(chk1, (0,2), flag=cv)        
 
@@ -318,6 +320,106 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         if pos == wx.DefaultPosition:
             self.Center()
 
+    def OnOk(self, event): # JGH This method heavily modified 1/20/14
+        global msa
+        p = self.prefs
+        # JGH modified 2/2/14
+        p.PLL1type = self.cmPLL1.GetValue()
+        p.PLL2type = self.cmPLL2.GetValue()
+        p.PLL3type = self.cmPLL3.GetValue()
+        p.PLL1phasepol = int(self.cmPOL1.GetValue()[1])  # JGH_001
+        p.PLL2phasepol = int(self.cmPOL2.GetValue()[1])  # JGH_001
+        p.PLL3phasepol = int(self.cmPOL3.GetValue()[1])  # JGH_001
+##        p.PLL1mode = int(self.cmMOD1.GetValue()[0]) # JGH 2/7/14 Fractional mode not used
+##        p.PLL3mode = int(self.cmMOD3.GetValue()[0]) # JGH 2/7/14 Fractional mode not used
+        p.PLL1phasefreq = float(self.tcPhF1.GetValue())
+        p.PLL2phasefreq = float(self.tcPhF2.GetValue())
+        p.PLL3phasefreq = float(self.tcPhF3.GetValue())
+
+        # JGH added 1/15/14
+        gr = self.gridRBW
+        RBWFilters = []
+        for row in range(4):
+            RBWfreq = float(gr.GetCellValue(row, 0))
+            RBWbw = float(gr.GetCellValue(row,1))
+            RBWFilters.append((RBWfreq, RBWbw))
+        p.RBWFilters = RBWFilters
+        # JGH NOTE: need to account here for existing RBW filters only
+        msa.RBWFilters = p.RBWFilters
+
+        gv = self.gridVF
+        vFilterCaps = []
+        for row in range(4):
+            #Label = gv.GetRowLabelValue(row)
+            uFcap = float(gv.GetCellValue(row,0)) # JGH 2/15/14
+            vFilterCaps.append(uFcap)
+        p.vFilterCaps = vFilterCaps
+
+##        magTC = 10 * magCap
+        # magTC: mag time constant in ms is based on 10k resistor and cap in uF
+##        phaTC = 2.7 * phaCap
+        # phaTC: phase time constant in ms is based on 2k7 resistor and cap in uF
+
+        # JGH NOTE: need to account here for existing Video filters only
+        msa.vFilterCaps = p.vFilterCaps
+
+        # TOPOLOGY
+        p.ADCtype = self.ADCoptCM.GetValue()
+
+        p.CBopt = CBopt = self.CBoptCM.GetValue()
+        
+        if CBopt == "LPT": # JGH Only Windows does this
+            p.winLPT = winUsesParallelPort = True
+            # Windows DLL for accessing parallel port
+            from ctypes import windll
+            try:
+                windll.LoadLibrary(os.path.join(resdir, "inpout32.dll"))
+                from msa_cb_pc import MSA_CB_PC
+                cb = MSA_CB_PC()
+                SetCb(cb)
+            except WindowsError:
+                # Start up an application just to show error dialog
+                app = wx.App(redirect=False)
+                app.MainLoop()
+                ScrolledMessageDialog(None,
+                                      "\n  inpout32.dll not found", "Error")
+                self.ShowModal()
+                sys.exit(-1)
+
+        elif CBopt == "USB": # JGH Windows, Linux and OSX do this
+            from msa_cb_usb import MSA_CB_USB
+            cb = MSA_CB_USB()
+            SetCb(cb)
+        elif CBopt == "RPI": # JGH RaspberryPi does this
+            from msa_cb import MSA_RPI
+            cb = MSA_RPI()
+            SetCb(cb)
+        elif CBopt == "BBB": # JGH BeagleBone does this
+            from msa_cb import MSA_BBB
+            cb = MSA_BBB()
+            SetCb(cb)
+        else:
+            pass
+
+        # JGH end of additions
+
+        p.configWinPos = self.GetPosition().Get()
+        GetLO1().appxdds =  p.appxdds1 =  float(self.dds1CentFreqBox.GetValue())
+        GetLO1().ddsfilbw = p.dds1filbw = float(self.dds1BWBox.GetValue())
+        GetLO3().appxdds =  p.appxdds3 =  float(self.dds3CentFreqBox.GetValue())
+        GetLO3().ddsfilbw = p.dds3filbw = float(self.dds3BWBox.GetValue())
+        msa.masterclock = p.masterclock = float(self.mastClkBox.GetValue())
+        p.invDeg = float(self.invDegBox.GetValue())
+        syntData = p.syntData
+        p.syntData = self.syntDataCB.GetValue()
+        if not syntData and p.syntData:
+            from synDUT import SynDUTDialog
+            msa.syndut = SynDUTDialog(self.frame)
+        if not p.syntData and msa.syndut:
+            msa.syndut.Destroy()
+            msa.syndut = None
+        self.Close()
+
     #--------------------------------------------------------------------------
     # Module directory
     def CreateModDir(self):
@@ -338,13 +440,13 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
 
     #--------------------------------------------------------------------------
 
-    def AllowSyntData(self, event):
-        sender = event.GetEventObject()
-        p = self.frame.prefs
-        if sender.GetValue() == 0:  # Do not use
-            p.syntData = False
-        else:
-            p.syntData = True  # Allow
+#    def AllowSyntData(self, event):
+#        sender = event.GetEventObject()
+#        p = self.frame.prefs
+#        if sender.GetValue() == 0:  # Do not use
+#            p.syntData = False
+#        else:
+#            p.syntData = True  # Allow
 
     #--------------------------------------------------------------------------
     # Present Help dialog.

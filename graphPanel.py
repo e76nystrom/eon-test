@@ -9,7 +9,7 @@ from msa import MSA
 from marker import Marker
 from util import MHz, ns, si, SI_NO,StdScale
 
-SetModuleVersion("graphPanel",("1.01","JGH.a","3/9/2014"))
+SetModuleVersion("graphPanel",("1.02","EON","03/12/2014"))
 
 #==============================================================================
 # A graph of a set of traces.
@@ -834,7 +834,6 @@ class GraphPanel(wx.Panel):
         frame = self.frame
         self.showCursor = False
         x, y = event.GetPosition()
-        ##print ("Mouse", x, y
 
         LogGUIEvent("OnMouse")
         if event.LeftDClick():

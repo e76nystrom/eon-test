@@ -3,7 +3,7 @@
 
 from msaGlobal import SetModuleVersion
 
-SetModuleVersion("msaRun",("1.0","3/6/2014"))
+SetModuleVersion("msaRun",("1.01","EON","03/12/2014"))
 
 import sys, traceback
 import msapy

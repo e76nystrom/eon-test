@@ -4,7 +4,7 @@ import os, string, subprocess, sys, usb
 from msa_cb import MSA_CB
 import array as uarray
 
-SetModuleVersion("msa_cb_usb",("1.02","EON","03/11/2014"))
+SetModuleVersion("msa_cb_usb",("1.03","EON","03/12/2014"))
 
 debug = False
 
@@ -177,7 +177,7 @@ class MSA_CB_USB(MSA_CB):
             result = self._readFIFO[0]
             self._readFIFO = self._readFIFO[1:]
         else:
-            reuslt = 0
+            result = 0
         return result
 
     # Send 40 bytes of PLL and DDC register data out port P1

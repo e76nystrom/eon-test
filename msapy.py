@@ -83,7 +83,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
-SetModuleVersion("msapy",("1.02","EON","03/11/2014"))
+SetModuleVersion("msapy",("1.03","EON","03/12/2014"))
 SetVersion(version)
 
 msa = None
@@ -250,7 +250,8 @@ class MSASpectrumFrame(wx.Frame):
         self.closeMenuItem = self.fileMenu.FindItemById(wx.ID_CLOSE)
         
 
-        self.logSplitter = wx.SplitterWindow(self, style=wx.SP_LIVE_UPDATE)
+        self.logSplitter = ls = wx.SplitterWindow(self, style=wx.SP_LIVE_UPDATE)
+        ls.Bind(wx.EVT_SPLITTER_DCLICK, self.OnSplitterDClick)
         self.mainP = mainP = wx.Panel(self.logSplitter, style=wx.BORDER_SUNKEN)
 
         # define controls and panels in main spectrum panel
@@ -979,97 +980,12 @@ class MSASpectrumFrame(wx.Frame):
     #--------------------------------------------------------------------------
     # Open the Configuration Manager dialog box.
 
-    def ManageHWConfig(self, event=None): # JGH This method heavily modified 1/20/14
-        global msa
+    def ManageHWConfig(self, event=None):
         self.StopScanAndWait()
         p = self.prefs
         from configDialog import ConfigDialog
         dlg = ConfigDialog(self)
-        if dlg.ShowModal() == wx.ID_OK:
-
-            # JGH modified 2/2/14
-            p.PLL1type = dlg.cmPLL1.GetValue()
-            p.PLL2type = dlg.cmPLL2.GetValue()
-            p.PLL3type = dlg.cmPLL3.GetValue()
-            p.PLL1phasepol = int(dlg.cmPOL1.GetValue()[1])  # JGH_001
-            p.PLL2phasepol = int(dlg.cmPOL2.GetValue()[1])  # JGH_001
-            p.PLL3phasepol = int(dlg.cmPOL3.GetValue()[1])  # JGH_001
-##            p.PLL1mode = int(dlg.cmMOD1.GetValue()[0]) # JGH 2/7/14 Fractional mode not used
-##            p.PLL3mode = int(dlg.cmMOD3.GetValue()[0]) # JGH 2/7/14 Fractional mode not used
-            p.PLL1phasefreq = float(dlg.tcPhF1.GetValue())
-            p.PLL2phasefreq = float(dlg.tcPhF2.GetValue())
-            p.PLL3phasefreq = float(dlg.tcPhF3.GetValue())
-
-            # JGH added 1/15/14
-            gr = dlg.gridRBW
-            RBWFilters = []
-            for row in range(4):
-                RBWfreq = float(gr.GetCellValue(row, 0))
-                RBWbw = float(gr.GetCellValue(row,1))
-                RBWFilters.append((RBWfreq, RBWbw))
-            p.RBWFilters = RBWFilters
-            # JGH NOTE: need to account here for existing RBW filters only
-            msa.RBWFilters = p.RBWFilters
-
-            gv = dlg.gridVF
-            vFilterCaps = []
-            for row in range(4):
-                #Label = gv.GetRowLabelValue(row)
-                uFcap = float(gv.GetCellValue(row,0)) # JGH 2/15/14
-                vFilterCaps.append(uFcap)
-            p.vFilterCaps = vFilterCaps
-
-##          magTC = 10 * magCap
-            # magTC: mag time constant in ms is based on 10k resistor and cap in uF
-##          phaTC = 2.7 * phaCap
-            # phaTC: phase time constant in ms is based on 2k7 resistor and cap in uF
-
-            # JGH NOTE: need to account here for existing Video filters only
-            msa.vFilterCaps = p.vFilterCaps
-
-            # TOPOLOGY
-            p.ADCtype = dlg.ADCoptCM.GetValue()
-
-            p.CBopt = CBopt = dlg.CBoptCM.GetValue()
-            
-            if CBopt == "LPT": # JGH Only Windows does this
-                p.winLPT = winUsesParallelPort = True
-                # Windows DLL for accessing parallel port
-                from ctypes import windll
-                try:
-                    windll.LoadLibrary(os.path.join(resdir, "inpout32.dll"))
-                    from msa_cb_pc import MSA_CB_PC
-                    cb = MSA_CB_PC()
-                except WindowsError:
-                    # Start up an application just to show error dialog
-                    app = wx.App(redirect=False)
-                    app.MainLoop()
-                    dlg = ScrolledMessageDialog(None,
-                                    "\n  inpout32.dll not found", "Error")
-                    dlg.ShowModal()
-                    sys.exit(-1)
-
-            elif CBopt == "USB": # JGH Windows, Linux and OSX do this
-                from msa_cb_usb import MSA_CB_USB
-                cb = MSA_CB_USB()
-            elif CBopt == "RPI": # JGH RaspberryPi does this
-                from msa_cb import MSA_RPI
-                cb = MSA_RPI()
-            elif CBopt == "BBB": # JGH BeagleBone does this
-                from msa_cb import MSA_BBB
-                cb =MSA_BBB()
-            else:
-                pass
-
-            # JGH end of additions
-
-            p.configWinPos = dlg.GetPosition().Get()
-            GetLO1().appxdds =  p.appxdds1 =  float(dlg.dds1CentFreqBox.GetValue())
-            GetLO1().ddsfilbw = p.dds1filbw = float(dlg.dds1BWBox.GetValue())
-            GetLO3().appxdds =  p.appxdds3 =  float(dlg.dds3CentFreqBox.GetValue())
-            GetLO3().ddsfilbw = p.dds3filbw = float(dlg.dds3BWBox.GetValue())
-            msa.masterclock = p.masterclock = float(dlg.mastClkBox.GetValue())
-            p.invDeg = float(dlg.invDegBox.GetValue())
+        dlg.ShowModal()
 
     #--------------------------------------------------------------------------
     # Open the Calibration File Manager dialog box.
@@ -1241,7 +1157,6 @@ class MSASpectrumFrame(wx.Frame):
         if not msa.syndut:
             from msa_cb import MSA_CB
             cb = MSA_CB()
-            SetHardwarePresent(False)
             from synDUT import SynDUTDialog
             msa.syndut = SynDUTDialog(self)
         else:
@@ -1829,6 +1744,11 @@ class MSASpectrumFrame(wx.Frame):
         if event:
             self.RefreshAllParms()
             event.Skip()
+
+    def OnSplitterDClick(self, event):
+        event.Veto()
+        self.logPhide(None)
+        self.RefreshAllParms()
 
     #--------------------------------------------------------------------------
     # About dialog.

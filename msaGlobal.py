@@ -5,14 +5,13 @@ ModuleInfo = {}
 
 def SetModuleVersion(name, version):
     global ModuleInfo
-    print (name, version)
     ModuleInfo[name] = version
 
 def GetModuleInfo():
     global ModuleInfo
     return(ModuleInfo)
 
-SetModuleVersion("msaGlobal",("1.02","EON","03/11/2014"))
+SetModuleVersion("msaGlobal",("1.03","EON","03/12/2014"))
 
 logEvents = False
 
@@ -55,8 +54,9 @@ def GetVersion():
     return(version)
 
 def SetHardwarePresent(val):
-    global hardwarePresent
+    global hardwarePresent, msa
     hardwarePresent = val
+    msa.hardwarePresent = val
 
 def GetHardwarePresent():
     global hardwarePresent

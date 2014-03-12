@@ -4,12 +4,12 @@ from msaGlobal import GetHardwarePresent, GetMsa, isWin, \
 import thread, time, traceback, wx
 from numpy import interp, isnan, linspace, log10, logspace, nan
 from Queue import Queue
-from util import divSafe, modDegree, msElapsed
+from util import divSafe, message, modDegree, msElapsed
 from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.0","JGH.a","3/10/2014"))
+SetModuleVersion("msa",("1.01","EON","03/12/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -143,7 +143,6 @@ class MSA:
         self.scanResults = Queue()
         # active Synthetic DUT
         self.syndut = None  # JGH 2/8/14 syndutHook1
-
 
     #--------------------------------------------------------------------------
     # Log one MSA event, given descriptive string. Records current time too.
@@ -377,15 +376,21 @@ class MSA:
                 SetHardwarePresent(hardwarePresent)
         SetCb(cb)
 
+        p = self.frame.prefs
+
         if not hardwarePresent:
             print ("\n>>>2462<<<    NO HARDWARE PRESENT")
             print ("\n>>>2463<<< GENERATING SYNTHETIC DATA") # JGH syndutHook2
-            from synDUT import SynDUTDialog
-            self.syndut = SynDUTDialog(self.gui)
-            wx.Yield()
-            self.gui.Raise()
-
-        p = self.frame.prefs
+            if p.syntData:
+                from synDUT import SynDUTDialog
+                self.syndut = SynDUTDialog(self.gui)
+                wx.Yield()
+                self.gui.Raise()
+            else:
+                message("Hardware not present. If you want to run with "
+                        "Synthetic Data, use Hardware Configuration Manager "
+                        "to enable Synthetic Data.",
+                        caption="Hardware not Present")
 
         # Instantiate MSA's 3 local oscillators
         PLL1phasefreq = p.get("PLL1phasefreq", 0.974)
@@ -536,8 +541,7 @@ class MSA:
         global cb
         p = self.frame.prefs  # JGH/SCOTTY 2/6/14
         step = self._step
-        if logEvents:
-            self._events.append(Event("CaptureOneStep %d" % step))
+        self.LogEvent("CaptureOneStep %d" % step)
         f = self._freqs[step]
 ##        print (">>>2572<<< step: ", step , ", f: ", f)
         if f < -48:
@@ -581,9 +585,8 @@ class MSA:
                 cb.Flush()
                 time.sleep(0)
                 self._ReadAD16Status()
-                if 0 and logEvents: # EON Jan 22, 2014/ jGH 3/9/14
-                    self._events.append(Event("CaptureOneStep got %06d" % \
-                                    self._magdata))
+                if 0: # jGH 3/9/14
+                    self.LogEvent("CaptureOneStep got %06d" % self._magdata)
                 if self._magdata < goodPhaseMagThreshold:
                     doPhase = False
 
@@ -615,9 +618,7 @@ class MSA:
                 self.LogEvent("CaptureOneStep synth, f=%g" % f)
                 self._InputSynth(f) # JGH syndutHook4
                 #invPhase = 0
-                cb.msWait(self.wait)
-                # sleep for 1 ms to give GUI a chance to catch up on key events
-                time.sleep(0.001)
+                time.sleep(self.wait / 1000.0)
 
             ##print ("Capture: magdata=", self._magdata
             if useCal and len(self.magTableADC) > 0:
@@ -767,9 +768,7 @@ class MSA:
             cb.Clear()
             elapsed = 0
             while self.scanEnabled:
-                if logEvents: # EON Jan 22, 2014
-                    self._events.append(Event("_ScanThread wloop, step %d" % \
-                                              self._step))
+                self.LogEvent("_ScanThread wloop, step %d" % self._step)
                 self.CaptureOneStep()
                 self.NextStep()
                 elapsed += int(self.wait) + 3
@@ -798,6 +797,7 @@ class MSA:
             self.scanEnabled = False
 
         self.LogEvent("_ScanThread exit")
+        print("scanthread exit")
         self._scanning = False
 
     #--------------------------------------------------------------------------
@@ -881,12 +881,13 @@ class MSA:
 
     def ContinueScan(self):
         self.LogEvent("ContinueScan: step=%d" % self._step)
-        if not self._scanning:
-            self.CreateSweepArray() # Creates GEORGE
-            self.LogEvent("ContinueScan start_new_thread")
-            self.scanEnabled = self._scanning = True
-            thread.start_new_thread(self._ScanThread, ())
-        self.LogEvent("ContinueScan exit")
+        if hardwarePresent or self.syndut != None:
+            if not self._scanning:
+                self.CreateSweepArray() # Creates GEORGE
+                self.LogEvent("ContinueScan start_new_thread")
+                self.scanEnabled = self._scanning = True
+                thread.start_new_thread(self._ScanThread, ())
+            self.LogEvent("ContinueScan exit")
 
     #--------------------------------------------------------------------------
     # SweepArray
