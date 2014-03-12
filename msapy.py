@@ -65,8 +65,8 @@ print ("Python:", sys.version) # Requires python v2.7
 print("sys.platform: ", sys.platform)
 
 import msaGlobal
-from msaGlobal import appdir, EVT_UPDATE_GRAPH, GetLO1, GetLO3, incremental, \
-    isMac, isWin, msPerUpdate, resdir, SetFontSize, SetHardwarePresent, \
+from msaGlobal import appdir, EVT_UPDATE_GRAPH, incremental, \
+    isMac, isWin, msPerUpdate, resdir, SetFontSize, \
     SetModuleVersion, SetVersion, slowDisplay, winUsesParallelPort
 import os, re, string, time, threading, wx
 import copy as dcopy
@@ -83,7 +83,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
-SetModuleVersion("msapy",("1.03","EON","03/12/2014"))
+SetModuleVersion("msapy",("1.04","EON","03/12/2014"))
 SetVersion(version)
 
 msa = None
@@ -982,7 +982,6 @@ class MSASpectrumFrame(wx.Frame):
 
     def ManageHWConfig(self, event=None):
         self.StopScanAndWait()
-        p = self.prefs
         from configDialog import ConfigDialog
         dlg = ConfigDialog(self)
         dlg.ShowModal()
@@ -1155,8 +1154,6 @@ class MSASpectrumFrame(wx.Frame):
     def SynDUT(self, event=None): # JGH 2/8/14 syndutHook7
         global msa
         if not msa.syndut:
-            from msa_cb import MSA_CB
-            cb = MSA_CB()
             from synDUT import SynDUTDialog
             msa.syndut = SynDUTDialog(self)
         else:
