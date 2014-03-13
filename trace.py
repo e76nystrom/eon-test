@@ -10,7 +10,7 @@ from util import angle
 from util import db
 from msa import MSA
 
-SetModuleVersion("trace",("1.02","EON","03/11/2014"))
+SetModuleVersion("trace",("1.03","EON","03/13/2014"))
 
 def SetMsa(val):
     global msa
@@ -458,6 +458,32 @@ class S11Trace(Trace):
         self.Zp[i] = nan_to_num(self.Zp[i])
         self.w[i] = 2*pi*spec.f[i]*MHz
 
+class RMagTrace(Trace):
+    desc = "Magnitude (dBm)"
+    name = "Mag"
+    units = "dBm"
+    top = 0
+    bot = -120
+    def __init__(self, spec, iScale):
+        Trace.__init__(self, spec, iScale)
+        self.v = dcopy.copy(spec.Mdb)
+
+    def SetStep(self, spec, i):
+        self.v[i] = spec.Mdb[i]
+
+class RPhaseTrace(Trace):
+    desc = "Phase (deg)"
+    name = "Phase"
+    units = "deg"
+    top = 180
+    bot = -180
+    def __init__(self, spec, iScale):
+        Trace.__init__(self, spec, iScale)
+        self.v = dcopy.copy(spec.Mdeg)
+
+    def SetStep(self, spec, i):
+        self.v[i] = spec.Mdeg[i]
+
 class CapTrace(S11Trace):
     units = "F"
     top = 1*uF
@@ -782,6 +808,8 @@ traceTypesLists[MSA.MODE_VNARefl] = (
     NoTrace,
     S11MagTrace,
     S11PhaseTrace,
+    RMagTrace,
+    RPhaseTrace,
     RhoTrace,
     ThetaTrace,
     ZMagTrace,

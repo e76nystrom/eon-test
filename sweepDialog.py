@@ -1,13 +1,13 @@
 from msaGlobal import GetMsa, isMac, SetModuleVersion
 import wx
 from msa import MSA
-from util import floatOrEmpty, gstr, mhzStr
+from util import floatOrEmpty, gstr, mhzStr, message
 from events import LogGUIEvent
 from util import StartStopToCentSpan, CentSpanToStartStop
 from stepAtten import SetStepAttenuator
 from theme import DarkTheme, LightTheme
 
-SetModuleVersion("sweepDialog",("1.0","JGH.a","3/11/2014"))
+SetModuleVersion("sweepDialog",("1.01","EON","03/13/2014"))
 
 debug = False
 
@@ -241,7 +241,9 @@ class SweepDialog(wx.Dialog):
         p = self.prefs
         LogGUIEvent("UpdateFromPrefs start=%g stop=%g" % (p.fStart, p.fStop))
         if p.fStop < p.fStart:
+            tmp = p.fStop
             p.fStop = p.fStart
+            p.fStart = tmp
 
 ##        self.dataModeCM.SetValue(p.get("dataMode", "0(Normal Operation)"))
 
@@ -340,7 +342,7 @@ class SweepDialog(wx.Dialog):
 
                 # For reflection only, Graph R()
                 if newMode == MSA.MODE_VNARefl:
-                    self.sizerH3V1.Add(wx.StaticText(self, -1, "Graph R()"), 0, wx.TOP, 7)
+                    self.sizerH3V1.Add(wx.StaticText(self, -1, "Smith Norm"), 0, wx.TOP, 7)
                     sizerH3V1H3 = wx.BoxSizer(wx.HORIZONTAL)
                     p.graphR = p.get("graphR", 50)
                     self.graphRBox = tc = wx.TextCtrl(self, -1, str(p.graphR), size=(50, -1))
@@ -466,8 +468,8 @@ class SweepDialog(wx.Dialog):
     # One Scan pressed- apply before scanning.
 
     def DoOneScan(self, event):
-        self.Apply()
-        self.frame.DoExactlyOneScan()
+        if self.Apply():
+            self.frame.DoExactlyOneScan()
 
     #--------------------------------------------------------------------------
     # Only enable selected freq text-entry boxes, and make other values track.
@@ -496,10 +498,10 @@ class SweepDialog(wx.Dialog):
             fStop = floatOrEmpty(self.stopBox.GetValue())
             if final and fStop < fStart:
                 if self.tcWithFocus == self.startBox:
+                    tmp = fStop
                     fStop = fStart
+                    fStart = tmp
                     self.stopBox.ChangeValue(mhzStr(fStop))
-                else:
-                    fStart = fStop
                     self.startBox.ChangeValue(mhzStr(fStart))
             fCent, fSpan = StartStopToCentSpan(fStart, fStop, isLogF)
             self.centBox.ChangeValue(mhzStr(fCent))
@@ -585,7 +587,6 @@ class SweepDialog(wx.Dialog):
         p.nSteps = int(self.stepsTB.GetValue())
         p.continuous = self.continCB.GetValue()
 
-
         if self.autoWaitCB.GetValue() == True:   # JGH 11/27/13
             self.calculateWait()
             self.waitTB.SetValue(str(p.wait))
@@ -613,6 +614,18 @@ class SweepDialog(wx.Dialog):
         else:
             p.sweepDir = 2
 
+        graphR = float(self.graphRBox.GetValue())
+        if msa.mode == MSA.MODE_VNARefl:
+            if p.graphR != graphR:
+                frame.smithDlg.Destroy()
+                from smithPanel import SmithDialog
+                frame.smithDlg = SmithDialog(frame)
+        p.graphR = graphR
+
+        if p.fStart < -48:
+            message("Start frequency out of range.")
+            return False
+
         frame.StopScanAndWait()
 ##        cb.SetP(4, msa.bitsVideo + msa.bitsRBW + msa.bitsFR +
 ##                msa.bitsTR + msa.bitsBand + msa.bitsPulse)
@@ -625,6 +638,7 @@ class SweepDialog(wx.Dialog):
         frame.ReadCalPath()
         frame.ReadCalFreq()
         specP.FullRefresh()
+        return True
 
     #--------------------------------------------------------------------------
     # Close pressed- save parameters back in prefs and close window.
@@ -637,5 +651,5 @@ class SweepDialog(wx.Dialog):
         frame.sweepDlg = None
 
     def OnOK(self, event):
-        self.Apply()
-        self.OnClose()
+        if self.Apply():
+            self.OnClose()

@@ -8,7 +8,7 @@ from msa import MSA
 from functionDialog import MainDialog
 from spectrum import Spectrum
 
-SetModuleVersion("cal",("1.02","EON","03/11/2014"))
+SetModuleVersion("cal",("1.03","EON","03/13/2014"))
 
 calWait = 50 # sweep wait during calibration # EON Jan 29, 2014
 
@@ -460,7 +460,7 @@ class PerformReflCalDialog(wx.Dialog):
         sizerH0 = wx.BoxSizer(wx.HORIZONTAL)
         txt = wx.StaticText(self, -1, "Fixture R0 (ohms)")
         sizerH0.Add(txt, 0, wx.EXPAND|wx.ALL|wx.ALIGN_CENTER_VERTICAL, 10)
-        self.fixtureR0Box = tc = wx.TextCtrl(self, -1, p.fixtureR0, size=(40, -1))
+        self.fixtureR0Box = tc = wx.TextCtrl(self, -1, str(p.fixtureR0), size=(40, -1))
         sizerH0.Add(tc, 0, wx.EXPAND|wx.ALL|wx.ALIGN_CENTER_VERTICAL, 10)
         sizerV.Add(sizerH0, 0, c|wx.ALL, 5)
 
@@ -719,10 +719,9 @@ class PerformReflCalDialog(wx.Dialog):
             self.openBtn.SetLabel("Perform Open")
             self.openDone.SetLabel("Done");
             self.EnableButtons(True)
+            self.Update()
             if self.isRefCal:
                 self.onDone(event)
-            else:
-                self.Update()
 
     def OnShort(self, event):
         msa = self.frame.msa
@@ -747,10 +746,9 @@ class PerformReflCalDialog(wx.Dialog):
             self.shortBtn.SetLabel("Perform Short")
             self.shortDone.SetLabel("Done");
             self.EnableButtons(True)
+            self.Update()
             if self.isRefCal:
                 self.onDone(event)
-            else:
-                self.Update()
 
     def OnLoad(self, event):
         msa = self.frame.msa
@@ -967,8 +965,7 @@ class PerformReflCalDialog(wx.Dialog):
         p.isSeriesFix = self.isSeriesFix
         p.isShuntFix = self.isShuntFix
         p.isRefCal = self.isRefCal
-        p.fixtureR0 = self.fixtureR0Box.GetValue()
-        frame.msa.fixtureR0 = float(p.fixtureR0)
+        frame.msa.fixtureR0 = p.fixtureR0 = float(self.fixtureR0Box.GetValue())
         p.shuntConDelay = self.conDelay.GetValue()
 
         spectrum = frame.spectrum

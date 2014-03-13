@@ -5,7 +5,7 @@ from msa import MSA
 from util import floatOrEmpty, gstr, Ohms
 from marker import Marker
 
-SetModuleVersion("functionDialog",("1.02","EON","03/11/2014"))
+SetModuleVersion("functionDialog",("1.03","EON","03/13/2014"))
 
 #==============================================================================
 # Base class for main dialog boxes.
@@ -18,12 +18,12 @@ class MainDialog(wx.Dialog):
         p = self.frame.prefs
         c = wx.ALIGN_CENTER
         chb = wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_BOTTOM
-        self.R0 = p.get("R0", 50.)
+        self.R0 = p.fixtureR0
         titleBox = wx.StaticBox(self, -1, "Test Fixture")
         sizerHF = wx.StaticBoxSizer(titleBox, wx.HORIZONTAL)
         sizerVF1 = wx.BoxSizer(wx.VERTICAL)
-        rb = wx.RadioButton(self, -1, "Series", style= wx.RB_GROUP)
-        self.seriesRB = rb
+        self.seriesRB = rb = wx.RadioButton(self, -1, "Series",
+                                            style= wx.RB_GROUP)
         rb.SetValue(isSeriesFix)
         sizerVF1.Add(rb, 0, wx.ALL, 2)
         self.shuntRB = rb = wx.RadioButton(self, -1, "Shunt")
@@ -37,6 +37,7 @@ class MainDialog(wx.Dialog):
         sizerVG2 = wx.GridBagSizer()
         sizerVG2.Add(wx.StaticText(self, -1, "R0"), (0, 0), flag=chb)
         self.R0Box = tc = wx.TextCtrl(self, -1, gstr(self.R0), size=(40, -1))
+        self.R0Box.Disable()
         sizerVG2.Add(tc, (1, 0), flag=c)
         sizerVG2.Add(wx.StaticText(self, -1, Ohms), (1, 1),
                 flag=c|wx.LEFT, border=4)
@@ -57,7 +58,7 @@ class FunctionDialog(MainDialog):
                             wx.DefaultSize, wx.DEFAULT_DIALOG_STYLE)
         frame.StopScanAndWait()
         self.helpDlg = None
-        self.R0 = p.get("R0", 50.)
+        self.R0 = p.fixtureR0
 
     #--------------------------------------------------------------------------
     # Common button events.

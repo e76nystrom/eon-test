@@ -73,8 +73,8 @@ import copy as dcopy
 import numpy.version
 from wx.lib.dialogs import ScrolledMessageDialog
 import trace
-from util import CentSpanToStartStop, CheckExtension, Prefs, \
-    mhzStr, modDegree, ShouldntOverwrite, StartStopToCentSpan
+from util import CentSpanToStartStop, CheckExtension, message, \
+    mhzStr, modDegree, Prefs, ShouldntOverwrite, StartStopToCentSpan
 from theme import DarkTheme, LightTheme
 from events import ResetEvents, LogGUIEvent, GuiEvents
 from msa import MSA
@@ -83,7 +83,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
-SetModuleVersion("msapy",("1.04","EON","03/12/2014"))
+SetModuleVersion("msapy",("1.05","EON","03/13/2014"))
 SetVersion(version)
 
 msa = None
@@ -1102,8 +1102,12 @@ class MSASpectrumFrame(wx.Frame):
         fCent, fSpan = StartStopToCentSpan(p.fStart, p.fStop, p.isLogF)
         p.fStart, p.fStop = CentSpanToStartStop(self.markMHz, fSpan, p.isLogF)
         self.RefreshAllParms()
-        self.spectrum = None
-        self.ScanPrecheck(True)
+        if p.fStart < -48:
+            self.SetSweep()
+            message("Start frequency out of range.")
+        else:
+            self.spectrum = None
+            self.ScanPrecheck(True)
 
     #--------------------------------------------------------------------------
     # Refresh parameter display in all open windows.

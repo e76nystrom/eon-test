@@ -5,7 +5,7 @@ from numpy import arange, angle, interp, log10, nan_to_num, pi, sqrt, tan
 from util import si
 from events import LogGUIEvent
 
-SetModuleVersion("smithPanel",("1.02","EON","03/11/2014"))
+SetModuleVersion("smithPanel",("1.03","EON","03/13/2014"))
 
 debug = False
 
@@ -124,7 +124,7 @@ class SmithPanel(wx.Panel):
         gc.StrokePath(path)
         gc.DrawText(text, -smRad-tw-2, -th/2)
 
-        R0 = 50.
+        R0 = p.get("graphR",50)
         for R in (0.2, 0.5, 1., 2., 4.):
             # resistance arcs
             s11r = (R-1) / (R+1)

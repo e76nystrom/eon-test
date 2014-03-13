@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.01","EON","03/12/2014"))
+SetModuleVersion("msa",("1.02","EON","03/13/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -110,7 +110,7 @@ class MSA:
         self._phasedata = 0
         self._Sdb = 0
         self._Sdeg = 0
-        self.fixtureR0 = float(p.get("fixtureR0", "50"))
+        self.fixtureR0 = p.get("fixtureR0", 50)
         self.lastBand = None
 
         # magnitude correction table ADC values
@@ -797,7 +797,6 @@ class MSA:
             self.scanEnabled = False
 
         self.LogEvent("_ScanThread exit")
-        print("scanthread exit")
         self._scanning = False
 
     #--------------------------------------------------------------------------
