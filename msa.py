@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.02","EON","03/13/2014"))
+SetModuleVersion("msa",("1.03","EON","03/14/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -381,7 +381,7 @@ class MSA:
         if not hardwarePresent:
             print ("\n>>>2462<<<    NO HARDWARE PRESENT")
             print ("\n>>>2463<<< GENERATING SYNTHETIC DATA") # JGH syndutHook2
-            if p.syntData:
+            if p.get("syntData", True):
                 from synDUT import SynDUTDialog
                 self.syndut = SynDUTDialog(self.gui)
                 wx.Yield()

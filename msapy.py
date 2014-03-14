@@ -83,7 +83,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
-SetModuleVersion("msapy",("1.05","EON","03/13/2014"))
+SetModuleVersion("msapy",("1.06","EON","03/14/2014"))
 SetVersion(version)
 
 msa = None
@@ -173,8 +173,8 @@ class MSASpectrumFrame(wx.Frame):
         self.menubar = wx.MenuBar()
         self.fileMenu = self.CreateMenu("&File", (
             ("Save Image...\tSHIFT-CTRL-S", "SaveImage", -1),
-            ("Load Prefs",              "LoadPrefs", -1),
-            ("Save Prefs",              "SavePrefs", -1),
+            ("Load Prefs",              "LoadPrefsFile", -1),
+            ("Save Prefs",              "SavePrefsFile", -1),
             ("Load Data...",            "LoadData", -1),
             ("Save Data...",            "SaveData", -1),
             ("Load/Save Test Setup...\tCTRL-s", "LoadSaveTestSetup", -1),
@@ -1315,6 +1315,41 @@ class MSASpectrumFrame(wx.Frame):
             writer(path, self.prefs)
         else:
             writer(data, path)
+
+    #--------------------------------------------------------------------------
+    # Load and save preferences using a dialog.
+
+    def LoadPrefsFile(self, event):
+        self.StopScanAndWait()
+        p = self.prefs
+        wildcard = "*.prefs"
+        dataDir = p.get("dataDir", appdir)
+        name = self.rootName + ".prefs"
+        dlg = wx.FileDialog(self, "Choose file...", defaultDir=dataDir,
+                defaultFile=name, wildcard=wildcard)
+        if dlg.ShowModal() != wx.ID_OK:
+            return
+        path = dlg.GetPath()
+        p.dataDir = os.path.dirname(path)
+        self.prefs = p = Prefs.FromFile(path)
+        isLight = p.get("graphAppear", "Light") == "Light"
+        p.theme = (DarkTheme, LightTheme)[isLight]
+        p.theme.UpdateFromPrefs(p)
+
+    def SavePrefsFile(self, event):
+        self.StopScanAndWait()
+        p = self.prefs
+        wildcard = "*.prefs"
+        dataDir = p.get("dataDir", appdir)
+        name = self.rootName + ".prefs"
+        dlg = wx.FileDialog(self, "Save as...", defaultDir=dataDir,
+            defaultFile=name, wildcard=wildcard, style=wx.FD_SAVE)
+        if dlg.ShowModal() != wx.ID_OK:
+            return
+        path = dlg.GetPath()
+        for m in self.specP.markers.values():
+            m.SavePrefs(p)
+        p.save(path)
 
     #--------------------------------------------------------------------------
     # Manually load and save preferences.

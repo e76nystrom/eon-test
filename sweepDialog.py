@@ -7,7 +7,7 @@ from util import StartStopToCentSpan, CentSpanToStartStop
 from stepAtten import SetStepAttenuator
 from theme import DarkTheme, LightTheme
 
-SetModuleVersion("sweepDialog",("1.01","EON","03/13/2014"))
+SetModuleVersion("sweepDialog",("1.02","EON","03/14/2014"))
 
 debug = False
 
@@ -614,13 +614,13 @@ class SweepDialog(wx.Dialog):
         else:
             p.sweepDir = 2
 
-        graphR = float(self.graphRBox.GetValue())
         if msa.mode == MSA.MODE_VNARefl:
+            graphR = float(self.graphRBox.GetValue())
             if p.graphR != graphR:
                 frame.smithDlg.Destroy()
                 from smithPanel import SmithDialog
                 frame.smithDlg = SmithDialog(frame)
-        p.graphR = graphR
+            p.graphR = graphR
 
         if p.fStart < -48:
             message("Start frequency out of range.")
