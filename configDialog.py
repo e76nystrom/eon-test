@@ -5,7 +5,7 @@ import wx.grid
 from wx.lib.dialogs import ScrolledMessageDialog
 from util import gstr, mu
 
-SetModuleVersion("configDialog",("1.01","EON","03/12/2014"))
+SetModuleVersion("configDialog",("1.01","JGH.a","03/15/2014"))
 
 #==============================================================================
 # The MSA/VNA Configuration Manager dialog box (also modal) # JGH
@@ -47,8 +47,8 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         st = wx.StaticText(self, -1, "DDS1-----Bandwidth (MHz)------DDS3")
         sizerG1.Add(st, (9, 0), (1, 3), chbt, 5)
 
-        csz = (95, -1) # JGH
-        tsz = (95, -1) # JGH
+        csz = (95, -1)
+        tsz = (95, -1)
 
         #JGH added . Modified 2/14/14
         pllTypeChoices = ["2325", "2326", "2350", "2353",\
@@ -123,25 +123,25 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         #cvr = wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT
         # JGH addition end
 
-        tc = wx.TextCtrl(self, -1, gstr(GetLO1().appxdds), size=tsz) # JGH 2/2/14
+        tc = wx.TextCtrl(self, -1, gstr(GetLO1().appxdds), size=tsz)
         tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
         tc.Enable(True)
         self.dds1CentFreqBox = tc
         sizerG1.Add(tc, (8, 0), flag=c)
 
-        tc = wx.TextCtrl(self, -1, gstr(GetLO3().appxdds), size=tsz) # JGH 2/2/14
+        tc = wx.TextCtrl(self, -1, gstr(GetLO3().appxdds), size=tsz)
         tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
         tc.Enable(True)
         self.dds3CentFreqBox = tc
         sizerG1.Add(tc, (8, 2), flag=c)
 
-        tc = wx.TextCtrl(self, -1, gstr(GetLO1().ddsfilbw), size=tsz) # JGH 2/2/14
+        tc = wx.TextCtrl(self, -1, gstr(GetLO1().ddsfilbw), size=tsz)
         tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
         tc.Enable(True)
         self.dds1BWBox = tc
         sizerG1.Add(tc, (10, 0), flag=c)
 
-        tc = wx.TextCtrl(self, -1, gstr(GetLO3().ddsfilbw), size=tsz) # JGH 2/2/14
+        tc = wx.TextCtrl(self, -1, gstr(GetLO3().ddsfilbw), size=tsz)
         tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
         tc.Enable(True)
         self.dds3BWBox = tc
@@ -159,7 +159,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         st = wx.StaticText(self, -1, "LO2 (MHz)")
         sizerG1.Add(st, (11, 1), (1, 1), chbt, 10)
         s = p.get("appxLO2", 1024)
-        tc = wx.TextCtrl(self, -1, gstr(s), size=tsz) # JGH 2/2/14
+        tc = wx.TextCtrl(self, -1, gstr(s), size=tsz)
         tc.Enable(True)
         self.appxLO2 = tc
         sizerG1.Add(tc, (12, 1), flag=c)
@@ -167,7 +167,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         st = wx.StaticText(self, -1, "Mast Clk (MHz)")
         sizerG1.Add(st, (11, 2), (1, 1), chbt, 10)
         s = p.get("masterclock", 64)
-        mastClkBox = wx.TextCtrl(self, -1, gstr(s), size=tsz) # JGH 2/2/14
+        mastClkBox = wx.TextCtrl(self, -1, gstr(s), size=tsz)
         mastClkBox.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
         mastClkBox.Enable(True)
         self.mastClkBox = mastClkBox
@@ -175,12 +175,12 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
 
         st = wx.StaticText(self, -1,  "Max PDM out" )
         sizerG1.Add(st, (13, 0), (1, 1), chbt, 10)
-        maxPDMout = wx.TextCtrl(self, -1, gstr(2**16-1), size=tsz) # JGH 2/2/14
+        maxPDMout = wx.TextCtrl(self, -1, gstr(2**16-1), size=tsz)
         maxPDMout.Enable(True) # JGH changed to True
         self.maxPDMout = maxPDMout
         sizerG1.Add(maxPDMout, (14, 0), flag=c)
 
-        st = wx.StaticText(self, -1,  "Sig Gen MHz" ) # JGH added 2/15/14
+        st = wx.StaticText(self, -1,  "Sig Gen MHz" )
         sizerG1.Add(st, (13, 1), (1, 1), chbt, 10)
         sigGenBox = wx.TextCtrl(self, -1, gstr(msa._sgout), size=tsz)
         sigGenBox.Enable(True)
@@ -190,7 +190,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         st = wx.StaticText(self, -1,  "Inv Deg" )
         sizerG1.Add(st, (13, 2), (1, 1), chbt, 10)
         s = p.get("invDeg", 180)
-        invDegBox = wx.TextCtrl(self, -1, gstr(s), size=tsz) # JGH 2/2/14
+        invDegBox = wx.TextCtrl(self, -1, gstr(s), size=tsz)
         invDegBox.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
         invDegBox.Enable(True)
         self.invDegBox = invDegBox
@@ -204,6 +204,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         btn = wx.Button(self, wx.ID_CANCEL)
         sizerG1.Add(btn, (16,1), flag=c)
         btn = wx.Button(self, wx.ID_OK)
+        btn.SetDefault()    # JGH 3/15/13
         btn.Bind(wx.EVT_BUTTON, self.OnOk)
         sizerG1.Add(btn, (16,2), flag=c)
 
@@ -212,7 +213,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         sizerH2 = wx.BoxSizer(wx.HORIZONTAL)
         # Final RBW Filter config
         self.rbwFiltersTitle = \
-                wx.StaticBox(self, -1, "Final RBW Filters" ) #JGH 12/25/13
+                wx.StaticBox(self, -1, "Final RBW Filters" )
         sizerV2A = wx.StaticBoxSizer(self.rbwFiltersTitle, wx.VERTICAL)
 
         colLabels = ["Freq(MHz)", "BW(kHz)"]
@@ -222,7 +223,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
             gr.SetColLabelValue(col, colLabels[col])
         gr.SetRowLabelSize(35)
         for i, (freq, bw) in enumerate(msa.RBWFilters):
-            gr.SetCellValue(i, 0, "%2.6f" % freq) # Jgh 1/28/14
+            gr.SetCellValue(i, 0, "%2.6f" % freq)
             gr.SetCellValue(i, 1, "%3.1f" % bw)
         gr.SetDefaultCellAlignment(wx.ALIGN_RIGHT, wx.ALIGN_CENTRE)
         gr.EnableEditing(1)
@@ -243,8 +244,8 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         rowLabels = msa.vFilterNames
         self.gridVF = gv = wx.grid.Grid(self)
         gv.CreateGrid(4,1)
-        for (i, uFcap) in enumerate(msa.vFilterCaps): # JGH 2/22/14
-            gv.SetCellValue(i, 0, "%4.3f" % uFcap) # JGH 2/22/14
+        for (i, uFcap) in enumerate(msa.vFilterCaps):
+            gv.SetCellValue(i, 0, "%4.3f" % uFcap)
         gv.SetRowLabelSize(72)
         gv.SetDefaultColSize(64)
         gv.SetColLabelValue(0, colLabels)
@@ -259,7 +260,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
 
         # Module Information
         optModsTitle = \
-                wx.StaticBox(self, -1, "Imported Module Information" ) #JGH 3/8/14
+                wx.StaticBox(self, -1, "Imported Module Information" )
         sizerH3 = wx.StaticBoxSizer(optModsTitle, wx.HORIZONTAL)
         importedModules = []
         ModuleInfo = GetModuleInfo()
@@ -272,6 +273,9 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         availModList = wx.ListBox(self, -1, pos=wx.DefaultPosition, \
                                   size=(360,120), choices=importedModules, \
                                   style=wx.LB_ALWAYS_SB|wx.LB_SINGLE)
+        # JGH (2 lines) 3/15/13
+        font1 = wx.Font(8, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Consolas')
+        availModList.SetFont(font1)
         sizerH3.Add(availModList, 1, flag=c)
         sizerV2.Add(sizerH3, 0, wx.ALL|wx.EXPAND, 4)
         
@@ -290,7 +294,6 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         sizerG2B.Add(cm, (0, 1), flag=cv)
 
         self.syntDataCB = chk1 = wx.CheckBox(self, -1, "Use Synthetic Data")
-#        self.Bind(wx.EVT_CHECKBOX, self.AllowSyntData, chk1)
         self.syntDataCB.SetValue(p.get("syntData", True))
         sizerG2B.Add(chk1, (0,2), flag=cv)        
 
@@ -300,7 +303,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
             CBoptions = ['LPT', 'USB', 'RPI', 'BBB']
             s = p.get("CBopt", CBoptions[1])
         else:
-            CBoptions = ['USB', 'RPI', 'BBB'] # JGH 1/16/14
+            CBoptions = ['USB', 'RPI', 'BBB']
             s = p.get("CBopt", CBoptions[0])
         self.CBoptCM = cm = wx.ComboBox(self, -1, s, (1, 1), cwsz, choices=CBoptions, style=wx.CB_READONLY)
         sizerG2B.Add(cm, (1, 1), flag=cv)

@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.03","EON","03/14/2014"))
+SetModuleVersion("msa",("1.0_JGH.a","3/10/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -62,7 +62,7 @@ class MSA:
         self.bitsVideo = p.get("vFilterSelIndex", 2)
         self.cftest = p.get("cftest", False)
         # Trace blanking gap
-        self.bGap = p.get("bGap", False)
+        self.bGap = p.get("bGap", False) 
         
         # SG output frequency (MHz)
         self._sgout = 10.
