@@ -9,7 +9,7 @@ from msa import MSA
 from marker import Marker
 from util import MHz, ns, si, SI_NO,StdScale
 
-SetModuleVersion("graphPanel",("1.02","EON","03/12/2014"))
+SetModuleVersion("graphPanel",("1.03","EON","03/15/2014"))
 
 #==============================================================================
 # A graph of a set of traces.
@@ -36,7 +36,7 @@ class GraphPanel(wx.Panel):
         self.h1 = 0.                # horizontal end (MHz)
         self.dh = 1.                # horizontal delta (MHz)
         # list of vertical scales
-        self.vScales = [VScale(0, 0, 1, 0, ""), VScale(0, 0, 1, 0, "")]
+        self.vScales = [VScale(0, 0, 1, 0, 0, ""), VScale(0, 0, 1, 0, 0, "")]
         self.traces = {}            # traces to graph, by name
         self.cursorStep = 0         # step location of cursor
         self.eraseOldTrace = False  # set to erase previous trace first
@@ -243,20 +243,24 @@ class GraphPanel(wx.Panel):
             vb0 = vs1.bot
             #if vaUnits:
             if aPrimary:
-                v0, v1 = va0, va1
+                v0, v1, = va0, va1
+                vDiv = vs0.div
                 units = vaUnits
             else:
                 v0, v1 = vb0, vb1
+                vDiv = vs1.Div
                 units = vbUnits
 
-            if units != "Deg":
+            if vDiv == 0 and units != "Deg":
                 dv, vBase, vFrac, nYDiv = \
                     StdScale(v0, v1, graphHt, self.gridVSize)
             else:
-                dv = (v1 - v0) / 10
+                if vDiv == 0:
+                    vDiv = 10
+                nYDiv = vDiv
+                dv = (v1 - v0) / nYDiv
                 vBase = v0
                 vFrac = 0
-                nYDiv = 10
 
             # calculate graph boundaries
             den = max(v1 - v0, 1e-20)

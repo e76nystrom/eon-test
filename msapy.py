@@ -83,7 +83,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
-SetModuleVersion("msapy",("1.06","EON","03/14/2014"))
+SetModuleVersion("msapy",("1.07","EON","03/15/2014"))
 SetVersion(version)
 
 msa = None
@@ -382,17 +382,19 @@ class MSASpectrumFrame(wx.Frame):
         va1 = p.get("va1", 0.)
         specP.vScales = vScales = []
         vai = p.get("vaTypeIndex", 1)
-        vScales.append(VScale(vai, msa.mode, va1, va0, "dB"))
+        vaDiv = p.get("vaDiv", 10)
+        vScales.append(VScale(vai, msa.mode, va1, va0, vaDiv, "dB"))
+        vbDiv = p.get("vbDiv", 10)
         if msa.mode < MSA.MODE_VNATran:
             vb0 = p.get("vb0", 0)
             vb1 = p.get("vb1", 0.)
             vbi = p.get("vbTypeIndex", 0)
-            vScales.append(VScale(vbi, msa.mode, vb1, vb0, "None"))
+            vScales.append(VScale(vbi, msa.mode, vb1, vb0, vbDiv, "None"))
         else:
             vb0 = p.get("vb0", -180.)
             vb1 = p.get("vb1", 180.)
             vbi = p.get("vbTypeIndex", 2)
-            vScales.append(VScale(vbi, msa.mode, vb1, vb0, "Deg"))
+            vScales.append(VScale(vbi, msa.mode, vb1, vb0, vbDiv, "Deg"))
         self.refs = {}
         self.lastDoneDrawTime = 0
         self.btnScanMode = False    # True when buttons in scanning mode
@@ -854,6 +856,7 @@ class MSASpectrumFrame(wx.Frame):
         p.vaTypeIndex = vaTypeIndex = min(vs0.typeIndex, maxIndex)
         p.va1 = vs0.top
         p.va0 = vs0.bot
+        p.vaDiv = vs0.div
         vaType = types[vaTypeIndex]
 
         # EON start of addition
@@ -871,6 +874,7 @@ class MSASpectrumFrame(wx.Frame):
         p.vbTypeIndex = vbTypeIndex = min(vs1.typeIndex, maxIndex)
         p.vb1 = vs1.top
         p.vb0 = vs1.bot
+        p.vbDiv = vs1.div
         vbType = types[vbTypeIndex]
         if spec.vbType != vbType:
             trvb = vbType(spec, 1)

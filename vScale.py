@@ -5,7 +5,7 @@ from numpy import isfinite
 from trace import traceTypesLists
 from util import floatSI, si, SI_ASCII, StdScale
 
-SetModuleVersion("vScale",("1.02","EON","03/11/2014"))
+SetModuleVersion("vScale",("1.03","EON","03/15/2014"))
 
 #==============================================================================
 # The Vertical Scale Parameters dialog window.
@@ -42,6 +42,22 @@ class VScaleDialog(wx.Dialog):
         btn = wx.Button(self, -1, "Auto Scale")
         btn.Bind(wx.EVT_BUTTON, self.OnAutoScale)
         sizerGB.Add(btn, (2, 2), flag=c)
+
+        st = wx.StaticText(self, -1, "Divisions")
+        sizerGB.Add(st, (3, 1), flag=cvr)
+        choices = ("Auto","6","8","10","12")
+        div = vScale.div
+        if div == 0:
+            i = 0
+        else:
+            for i in range(1, len(choices)):
+                if div == int(choices[i]):
+                    break
+        cbox = wx.ComboBox(self, -1, choices[i], (0, 0), (80, -1), choices)
+        cbox.SetStringSelection(choices[i])
+        self.divSelCB = cbox
+        self.Bind(wx.EVT_COMBOBOX, self.OnSelectDiv, cbox)
+        sizerGB.Add(cbox, (3, 2), flag=c)
 
         # graph data select
         st = wx.StaticText(self, -1, "Graph Data")
@@ -125,6 +141,22 @@ class VScaleDialog(wx.Dialog):
         trace.max = False
 
     #--------------------------------------------------------------------------
+    # Number of divisions is selected
+
+    def OnSelectDiv(self, event):
+        vScale = self.vScale
+        val = self.divSelCB.GetValue()
+
+        if val == "Auto":
+            val = 0
+        else:
+            val = int(val)
+
+        if val != vScale.div:
+            vScale.div = val
+        self.Update()
+
+    #--------------------------------------------------------------------------
     # A graph data type selected- if new, remember it and run auto scale.
 
     def OnSelectType(self, event):
@@ -153,10 +185,11 @@ class VScaleDialog(wx.Dialog):
 # graph, with higher-priority scales on the inside.
 
 class VScale:
-    def __init__(self, typeIndex, mode, top, bot, primeTraceUnits):
+    def __init__(self, typeIndex, mode, top, bot, div, primeTraceUnits):
         self.typeIndex = typeIndex
         self.top = top
         self.bot = bot
+        self.div = div
         self.maxHold = False
         self.primeTraceUnits = primeTraceUnits
         typeList = traceTypesLists[mode]
@@ -179,7 +212,8 @@ class VScale:
                 print ("Auto scale: values from", vmin, "to", vmax)
                 # round min/max to next even power
                 ds, base, frac, nDiv = StdScale(vmin, vmax, 1., 1.)
-                print ("Auto scale: ds=", ds, "base=", base, "frac=", frac, "nDiv=", nDiv)
+                print ("Auto scale: ds=", ds, "base=", base, "frac=", \
+                       frac, "nDiv=", nDiv)
                 if isfinite(base) and isfinite(ds):
                     if frac == 0:
                         bot = base
