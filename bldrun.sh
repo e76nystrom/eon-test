@@ -4,7 +4,7 @@ tar xzvf PyInstaller-2.1.tar.gz
 cd PyInstaller-2.1/bootloader
 ./waf configure --no-lsb
 ./waf
-$pi=0
+pi=0
 if [ $pi -ne 0 ]
 then
  dst=/usr/local/lib/python2.7/dist-packages/PyInstaller-2.1-py2.7.egg/PyInstaller/loader/rthooks/
