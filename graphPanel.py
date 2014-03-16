@@ -9,7 +9,7 @@ from msa import MSA
 from marker import Marker
 from util import MHz, ns, si, SI_NO,StdScale
 
-SetModuleVersion("graphPanel",("1.03","EON","03/15/2014"))
+SetModuleVersion("graphPanel",("1.04","EON","03/16/2014"))
 
 #==============================================================================
 # A graph of a set of traces.
@@ -258,7 +258,7 @@ class GraphPanel(wx.Panel):
                 if vDiv == 0:
                     vDiv = 10
                 nYDiv = vDiv
-                dv = (v1 - v0) / nYDiv
+                dv = (v1 - v0) / float(nYDiv)
                 vBase = v0
                 vFrac = 0
 

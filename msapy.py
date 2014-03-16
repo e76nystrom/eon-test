@@ -65,8 +65,8 @@ print ("Python:", sys.version) # Requires python v2.7
 print("sys.platform: ", sys.platform)
 
 import msaGlobal
-from msaGlobal import appdir, EVT_UPDATE_GRAPH, incremental, \
-    isMac, isWin, msPerUpdate, resdir, SetFontSize, \
+from msaGlobal import appdir, EVT_UPDATE_GRAPH, GetHardwarePresent, \
+    incremental, isMac, isWin, msPerUpdate, resdir, SetFontSize, \
     SetModuleVersion, SetVersion, slowDisplay, winUsesParallelPort
 import os, re, string, time, threading, wx
 import copy as dcopy
@@ -83,7 +83,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
-SetModuleVersion("msapy",("1.08","EON","03/16/2014"))
+SetModuleVersion("msapy",("1.09","EON","03/16/2014"))
 SetVersion(version)
 
 msa = None
@@ -616,6 +616,13 @@ class MSASpectrumFrame(wx.Frame):
         # tell MSA hardware backend to start a scan
         msa.ConfigForScan(self, p, haltAtEnd)
 
+        if not GetHardwarePresent() and not msa.syndut:
+            msa.scanResults.put((0, 0, 0, 0, 0, 0, 0, 0, 0))
+            message("Hardware not present. If you want to run with "
+                    "Synthetic Data, use Hardware Configuration Manager "
+                    "to enable Synthetic Data.",
+                    caption="Hardware not Present")
+
         LogGUIEvent("ScanPrecheck starting timer")
         # start display-update timer, given interval in ms
         self.timer.Start(msPerUpdate)
@@ -860,7 +867,6 @@ class MSASpectrumFrame(wx.Frame):
         p.vaDiv = vs0.div
         vaType = types[vaTypeIndex]
 
-        # EON start of addition
         if spec.vaType != vaType:
             trva = vaType(spec, 0)
             trva.maxHold = vs0.maxHold
@@ -870,6 +876,7 @@ class MSASpectrumFrame(wx.Frame):
                 spec.trva = trva
         else:
             trva = spec.trva
+
         trva.iColor = self.IndexForColor(0)
         vs1 = vScales[1]
         p.vbTypeIndex = vbTypeIndex = min(vs1.typeIndex, maxIndex)
@@ -877,6 +884,7 @@ class MSASpectrumFrame(wx.Frame):
         p.vb0 = vs1.bot
         p.vbDiv = vs1.div
         vbType = types[vbTypeIndex]
+
         if spec.vbType != vbType:
             trvb = vbType(spec, 1)
             trvb.maxHold = vs1.maxHold
@@ -908,7 +916,6 @@ class MSASpectrumFrame(wx.Frame):
         if trM and trP:
             trM.phaseTrace = trP
             trP.magTrace = trM
-        # EON end of addition
 
         # draw any compatible reference traces
         for ri in self.refs.keys():
@@ -1657,19 +1664,15 @@ class MSASpectrumFrame(wx.Frame):
     # Set the main operating mode.
 
     def SetMode_SA(self, event):
-        global msa
         self.SetMode(MSA.MODE_SA)
 
     def SetMode_SATG(self, event):
-        global msa
         self.SetMode(MSA.MODE_SATG)
 
     def SetMode_VNATran(self, event):
-        global msa
         self.SetMode(MSA.MODE_VNATran)
 
     def SetMode_VNARefl(self, event):
-        global msa
         self.SetMode(MSA.MODE_VNARefl)
 
     def SetMode(self, mode):
@@ -1682,7 +1685,7 @@ class MSASpectrumFrame(wx.Frame):
             print ("Changed MSA mode to", msa.modeNames[mode])
         self.prefs.mode = mode
         msa.SetMode(mode)
-        if self.spectrum:
+        if self.specP:
             # reset trace type selections to default for this mode
             vScales = self.specP.vScales
             vs0 = vScales[0]

@@ -4,7 +4,7 @@ from msaGlobal import GetHardwarePresent, GetMsa, isWin, \
 import thread, time, traceback, wx
 from numpy import interp, isnan, linspace, log10, logspace, nan
 from Queue import Queue
-from util import divSafe, message, modDegree, msElapsed
+from util import divSafe, modDegree, msElapsed
 from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
@@ -380,17 +380,12 @@ class MSA:
 
         if not hardwarePresent:
             print ("\n>>>2462<<<    NO HARDWARE PRESENT")
-            print ("\n>>>2463<<< GENERATING SYNTHETIC DATA") # JGH syndutHook2
             if p.syntData:
+                print ("\n>>>2463<<< GENERATING SYNTHETIC DATA") # JGH syndutHook2
                 from synDUT import SynDUTDialog
                 self.syndut = SynDUTDialog(self.gui)
                 wx.Yield()
                 self.gui.Raise()
-            else:
-                message("Hardware not present. If you want to run with "
-                        "Synthetic Data, use Hardware Configuration Manager "
-                        "to enable Synthetic Data.",
-                        caption="Hardware not Present")
 
         # Instantiate MSA's 3 local oscillators
         PLL1phasefreq = p.get("PLL1phasefreq", 0.974)
@@ -524,15 +519,16 @@ class MSA:
 
     def _InputSynth(self, f): # JGH 2/8/14 syndutHook3
         syndut = self.syndut
-        nf = len(syndut.synSpecF)
-        nM = len(syndut.synSpecM)
-        nP = len(syndut.synSpecP)
-        if nf != nM or nf != nP:
-            print ("msa.InputSynth: length mismatch: nf=%d nM=%d nP=%d" % \
-                (nf, nM, nP))
-        else:
-            self._magdata =   interp(f, syndut.synSpecF, syndut.synSpecM)
-            self._phasedata = interp(f, syndut.synSpecF, syndut.synSpecP)
+        if syndut:
+            nf = len(syndut.synSpecF)
+            nM = len(syndut.synSpecM)
+            nP = len(syndut.synSpecP)
+            if nf != nM or nf != nP:
+                print ("msa.InputSynth: length mismatch: nf=%d nM=%d nP=%d" % \
+                       (nf, nM, nP))
+            else:
+                self._magdata =   interp(f, syndut.synSpecF, syndut.synSpecM)
+                self._phasedata = interp(f, syndut.synSpecF, syndut.synSpecP)
 
     #--------------------------------------------------------------------------
     # Capture magnitude and phase data for one step.
