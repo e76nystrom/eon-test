@@ -83,7 +83,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
-SetModuleVersion("msapy",("1.07","EON","03/15/2014"))
+SetModuleVersion("msapy",("1.08","EON","03/16/2014"))
 SetVersion(version)
 
 msa = None
@@ -376,6 +376,7 @@ class MSASpectrumFrame(wx.Frame):
         p.get("stepAttenDB", 0)
         p.get("switchPulse", 0) # JGH added Oct23
         p.get("cftest", 0)
+        p.get("syntData",False)
 
         # initialize spectrum graph
         va0 = p.get("va0", -120.)

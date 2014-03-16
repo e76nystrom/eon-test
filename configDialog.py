@@ -5,7 +5,7 @@ import wx.grid
 from wx.lib.dialogs import ScrolledMessageDialog
 from util import gstr, mu
 
-SetModuleVersion("configDialog",("1.01","JGH.a","03/15/2014"))
+SetModuleVersion("configDialog",("1.02","EON","03/16/2014"))
 
 #==============================================================================
 # The MSA/VNA Configuration Manager dialog box (also modal) # JGH
@@ -294,17 +294,18 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         sizerG2B.Add(cm, (0, 1), flag=cv)
 
         self.syntDataCB = chk1 = wx.CheckBox(self, -1, "Use Synthetic Data")
-        self.syntDataCB.SetValue(p.get("syntData", True))
+        self.syntDataCB.SetValue(p.get("syntData", False))
+        print("syntData: ", self.syntDataCB.GetValue())
         sizerG2B.Add(chk1, (0,2), flag=cv)        
 
         sizerG2B.Add(wx.StaticText(self, -1,  "Interface" ), (1, 0), flag=cvl)
         
+        CBoptions = ['LPT', 'USB', 'RPI', 'BBB']
         if isWin:
-            CBoptions = ['LPT', 'USB', 'RPI', 'BBB']
-            s = p.get("CBopt", CBoptions[1])
+            s = p.get("CBoptions",CBoptions[1])
         else:
-            CBoptions = ['USB', 'RPI', 'BBB']
-            s = p.get("CBopt", CBoptions[0])
+            CBoptions = CBoptions[1:4]
+            s = p.get("CBoptions",CBoptions[0])
         self.CBoptCM = cm = wx.ComboBox(self, -1, s, (1, 1), cwsz, choices=CBoptions, style=wx.CB_READONLY)
         sizerG2B.Add(cm, (1, 1), flag=cv)
         sizerV2C.Add(sizerG2B, 0, wx.ALL, 5)
@@ -368,9 +369,18 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
 
         # TOPOLOGY
         p.ADCtype = self.ADCoptCM.GetValue()
-
-        p.CBopt = CBopt = self.CBoptCM.GetValue()
         
+        syntData = p.syntData 
+        p.syntData = self.syntDataCB.GetValue()
+        print("syntData: ", self.syntDataCB.GetValue())
+        if not syntData and p.syntData:
+            from synDUT import SynDUTDialog
+            msa.syndut = SynDUTDialog(self.frame)
+        if not p.syntData and msa.syndut:
+            msa.syndut.Destroy()
+            msa.syndut = None
+                      
+        p.CBopt = CBopt = self.CBoptCM.GetValue()
         if CBopt == "LPT": # JGH Only Windows does this
             p.winLPT = winUsesParallelPort = True
             # Windows DLL for accessing parallel port
@@ -413,14 +423,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         GetLO3().ddsfilbw = p.dds3filbw = float(self.dds3BWBox.GetValue())
         msa.masterclock = p.masterclock = float(self.mastClkBox.GetValue())
         p.invDeg = float(self.invDegBox.GetValue())
-        syntData = p.syntData
-        p.syntData = self.syntDataCB.GetValue()
-        if not syntData and p.syntData:
-            from synDUT import SynDUTDialog
-            msa.syndut = SynDUTDialog(self.frame)
-        if not p.syntData and msa.syndut:
-            msa.syndut.Destroy()
-            msa.syndut = None
+        
         self.Close()
 
     #--------------------------------------------------------------------------

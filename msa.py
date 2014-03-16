@@ -381,7 +381,7 @@ class MSA:
         if not hardwarePresent:
             print ("\n>>>2462<<<    NO HARDWARE PRESENT")
             print ("\n>>>2463<<< GENERATING SYNTHETIC DATA") # JGH syndutHook2
-            if p.get("syntData", True):
+            if p.syntData:
                 from synDUT import SynDUTDialog
                 self.syndut = SynDUTDialog(self.gui)
                 wx.Yield()
