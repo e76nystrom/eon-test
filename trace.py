@@ -10,7 +10,7 @@ from util import angle
 from util import db
 from msa import MSA
 
-SetModuleVersion("trace",("1.03","EON","03/13/2014"))
+SetModuleVersion("trace",("1.04","EON","03/16/2014"))
 
 def SetMsa(val):
     global msa
@@ -401,22 +401,26 @@ class S11Trace(Trace):
         self.S21db = self.Sdb
         self.S21deg = self.Sdeg
 
+        # Using a Series or Shunt "Reflectance" fixture:
         if spec.isSeriesFix or spec.isShuntFix:
-            # Using a Series or Shunt "Reflectance" fixture:
-            S11, Z = EquivS11FromS21(S11, spec.isSeriesFix, msa.fixtureR0)
-            self.Z = Z
+            S11, Zs = EquivS11FromS21(S11, spec.isSeriesFix, msa.fixtureR0)
+            self.S11 = S11
+            self.Zs = Zs
             self.Sdb = db(abs(S11))
             self.Sdeg = 180*angle(S11)/pi
+        else:
+            self.S11 = S11
+            save = seterr(all="ignore")
+            self.Zs = Zs = msa.fixtureR0 * (1 + S11) / (1 - S11)
+            seterr(**save)
+            self.Zs = nan_to_num(self.Zs)
 
-        self.S11 = S11
-        save = seterr(all="ignore")
-        self.Zs = Zs = msa.fixtureR0 * (1 + S11) / (1 - S11)
-        self.Zs = nan_to_num(self.Zs)
         # Zp is equivalent parallel impedance to Zs
         mag2 = Zs.real**2 + Zs.imag**2
+        save = seterr(all="ignore")
         self.Zp = mag2/Zs.real + 1j*mag2/Zs.imag
-        self.Zp = nan_to_num(self.Zp)
         seterr(**save)
+        self.Zp = nan_to_num(self.Zp)
         self.w = 2*pi*spec.f*MHz
 
     def SetStep(self, spec, i):
@@ -439,23 +443,26 @@ class S11Trace(Trace):
         self.S21db = self.Sdb[i]
         self.S21deg = self.Sdeg[i]
  
+        # Using a Series or Shunt "Reflectance" fixture:
         if spec.isSeriesFix or spec.isShuntFix:
-            # Using a Series or Shunt "Reflectance" fixture:
-            S11, Z = EquivS11FromS21(S11[i], spec.isSeriesFix, msa.fixtureR0)
-            self.Z[i] = Z
+            S11, Zs = EquivS11FromS21(S11, spec.isSeriesFix, msa.fixtureR0)
+            self.S11[i] = S11
+            self.Zs[i] = Zs
             self.Sdb[i] = db(abs(S11))
             self.Sdeg[i] = 180*angle(S11)/pi
- 
-        self.S11[i] = S11
-        self.Zs[i] = Zs = msa.fixtureR0 * (1 + S11) / (1 - S11)
+        else:
+            self.S11[i] = S11
+            try:
+                self.Zs[i] = Zs = msa.fixtureR0 * (1 + S11) / (1 - S11)
+            except:
+                self.Zs[i] = Zs = complex(0, 0)
+
         # Zp is equivalent parallel impedance to Zs
         mag2 = Zs.real**2 + Zs.imag**2
-        self.Zs[i] = nan_to_num(self.Zs[i])
         try:
             self.Zp[i] = mag2/Zs.real + 1j*mag2/Zs.imag
         except ZeroDivisionError:
             self.Zp[i] = 0
-        self.Zp[i] = nan_to_num(self.Zp[i])
         self.w[i] = 2*pi*spec.f[i]*MHz
 
 class RMagTrace(Trace):

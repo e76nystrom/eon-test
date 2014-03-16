@@ -5,7 +5,7 @@ from msa import MSA
 from util import floatOrEmpty, gstr, Ohms
 from marker import Marker
 
-SetModuleVersion("functionDialog",("1.03","EON","03/13/2014"))
+SetModuleVersion("functionDialog",("1.04","EON","03/16/2014"))
 
 #==============================================================================
 # Base class for main dialog boxes.
@@ -24,13 +24,16 @@ class MainDialog(wx.Dialog):
         sizerVF1 = wx.BoxSizer(wx.VERTICAL)
         self.seriesRB = rb = wx.RadioButton(self, -1, "Series",
                                             style= wx.RB_GROUP)
+        rb.Disable()
         rb.SetValue(isSeriesFix)
         sizerVF1.Add(rb, 0, wx.ALL, 2)
         self.shuntRB = rb = wx.RadioButton(self, -1, "Shunt")
+        rb.Disable()
         rb.SetValue(isShuntFix)
         sizerVF1.Add(rb, 0, wx.ALL, 2)
         if GetMsa().mode == MSA.MODE_VNARefl:
             self.bridgeRB = rb = wx.RadioButton(self, -1, "Bridge")
+            rb.Disable()
             rb.SetValue(not (isSeriesFix or isShuntFix))
             sizerVF1.Add(rb, 0, wx.ALL, 2)
         sizerHF.Add(sizerVF1, 0, c|wx.RIGHT, 10)

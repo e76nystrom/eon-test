@@ -8,7 +8,7 @@ from msa import MSA
 from functionDialog import MainDialog
 from spectrum import Spectrum
 
-SetModuleVersion("cal",("1.03","EON","03/13/2014"))
+SetModuleVersion("cal",("1.04","EON","03/16/2014"))
 
 calWait = 50 # sweep wait during calibration # EON Jan 29, 2014
 
@@ -461,6 +461,7 @@ class PerformReflCalDialog(wx.Dialog):
         txt = wx.StaticText(self, -1, "Fixture R0 (ohms)")
         sizerH0.Add(txt, 0, wx.EXPAND|wx.ALL|wx.ALIGN_CENTER_VERTICAL, 10)
         self.fixtureR0Box = tc = wx.TextCtrl(self, -1, str(p.fixtureR0), size=(40, -1))
+        self.btnList.append(tc)
         sizerH0.Add(tc, 0, wx.EXPAND|wx.ALL|wx.ALIGN_CENTER_VERTICAL, 10)
         sizerV.Add(sizerH0, 0, c|wx.ALL, 5)
 
@@ -486,6 +487,7 @@ class PerformReflCalDialog(wx.Dialog):
         self.conDelayText = txt = wx.StaticText(self, -1, "Connect Delay (ns)")
         fixTypeBoxSizer.Add(txt, 0, c|wx.ALL, 2)
         self.conDelay = tc = wx.TextCtrl(self, -1, p.get("shuntConDelay", "0"), size=(60, -1))
+        self.btnList.append(tc)
         fixTypeBoxSizer.Add(tc, 0, c|wx.ALL, 2)
 
         self.fixTypeSizer.Add(fixTypeBoxSizer, 0, c|wx.ALL, 5)
@@ -576,6 +578,7 @@ class PerformReflCalDialog(wx.Dialog):
 
         loads = ['Ideal 50 ohms','Custom']
         self.loadBox = cb = wx.ComboBox(self, -1, choices=loads, style=wx.CB_READONLY)
+        self.btnList.append(cb)
         cb.Bind(wx.EVT_COMBOBOX, self.OnLoadBox)
         calStd = p.get("calStandard", 0)
         cb.SetSelection(calStd)
@@ -598,6 +601,8 @@ class PerformReflCalDialog(wx.Dialog):
         if pos == wx.DefaultPosition:
             self.Center()
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.abort = False
+        self.close = False
 
     def OnLoadBox(self,event):
         self.Update()
@@ -701,6 +706,7 @@ class PerformReflCalDialog(wx.Dialog):
         msa = self.frame.msa
         if msa.IsScanning():
             msa.StopScan()
+            self.abort = True
         else:
             self.EnableButtons(False)
             self.openBtn.SetLabel("Abort Cal")
@@ -709,24 +715,28 @@ class PerformReflCalDialog(wx.Dialog):
                 spectrum = self.ReadSpectrum('open')
             else:
                 spectrum = self.CalScan()
-            oslCal = self.OslCal(spectrum)
-            if self.saveSpectrum:
-                spectrum.WriteInput("open.txt",self.prefs)
-                spectrum.WriteS1P("open.s1p",self.prefs)
-            for i in range (0, spectrum.nSteps + 1):
-                oslCal.OSLcalOpen[i] = (spectrum.Sdb[i], spectrum.Sdeg[i])
-            oslCal.OSLdoneO = True
+            if self.close:
+                self.Destroy()
+            if not self.abort:
+                oslCal = self.OslCal(spectrum)
+                if self.saveSpectrum:
+                    spectrum.WriteInput("open.txt",self.prefs)
+                    spectrum.WriteS1P("open.s1p",self.prefs)
+                for i in range (0, spectrum.nSteps + 1):
+                    oslCal.OSLcalOpen[i] = (spectrum.Sdb[i], spectrum.Sdeg[i])
+                oslCal.OSLdoneO = True
+                self.openDone.SetLabel("Done");
             self.openBtn.SetLabel("Perform Open")
-            self.openDone.SetLabel("Done");
             self.EnableButtons(True)
             self.Update()
-            if self.isRefCal:
+            if not self.abort and self.isRefCal:
                 self.onDone(event)
 
     def OnShort(self, event):
         msa = self.frame.msa
         if msa.IsScanning():
             msa.StopScan()
+            self.abort = True
         else:
             self.EnableButtons(False)
             self.shortBtn.SetLabel("Abort Cal")
@@ -736,24 +746,28 @@ class PerformReflCalDialog(wx.Dialog):
                 spectrum = self.ReadSpectrum('short')
             else:
                 spectrum = self.CalScan()
-            oslCal = self.OslCal(spectrum)
-            if self.saveSpectrum:
-                spectrum.WriteInput("short.txt",self.prefs)
-                spectrum.WriteS1P("short.s1p",self.prefs)
-            for i in range (0, spectrum.nSteps + 1):
-                oslCal.OSLcalShort[i] = (spectrum.Mdb[i], spectrum.Mdeg[i])
-            oslCal.OSLdoneS = True
+            if self.close:
+                self.Destroy()
+            if not self.abort:
+                oslCal = self.OslCal(spectrum)
+                if self.saveSpectrum:
+                    spectrum.WriteInput("short.txt",self.prefs)
+                    spectrum.WriteS1P("short.s1p",self.prefs)
+                for i in range (spectrum.nSteps + 1):
+                    oslCal.OSLcalShort[i] = (spectrum.Mdb[i], spectrum.Mdeg[i])
+                oslCal.OSLdoneS = True
+                self.shortDone.SetLabel("Done");
             self.shortBtn.SetLabel("Perform Short")
-            self.shortDone.SetLabel("Done");
             self.EnableButtons(True)
             self.Update()
-            if self.isRefCal:
+            if not self.abort and self.isRefCal:
                 self.onDone(event)
 
     def OnLoad(self, event):
         msa = self.frame.msa
         if msa.IsScanning():
             msa.StopScan()
+            self.abort = True
         else:
             self.EnableButtons(False)
             self.loadBtn.SetLabel("Abort Cal")
@@ -762,15 +776,18 @@ class PerformReflCalDialog(wx.Dialog):
                 spectrum = self.ReadSpectrum('load')
             else:
                 spectrum = self.CalScan()
-            oslCal = self.OslCal(spectrum)
-            if self.saveSpectrum:
-                spectrum.WriteInput("load.txt",self.prefs)
-                spectrum.WriteS1P("load.s1p",self.prefs)
-            for i in range (0, spectrum.nSteps + 1):
-                oslCal.OSLcalLoad[i] = (spectrum.Mdb[i], spectrum.Mdeg[i])
-            oslCal.OSLdoneL = True
+            if self.close:
+                self.Destroy()
+            if not self.abort:
+                oslCal = self.OslCal(spectrum)
+                if self.saveSpectrum:
+                    spectrum.WriteInput("load.txt",self.prefs)
+                    spectrum.WriteS1P("load.s1p",self.prefs)
+                for i in range (spectrum.nSteps + 1):
+                    oslCal.OSLcalLoad[i] = (spectrum.Mdb[i], spectrum.Mdeg[i])
+                oslCal.OSLdoneL = True
+                self.loadDone.SetLabel("Done");
             self.loadBtn.SetLabel("Perform Load")
-            self.loadDone.SetLabel("Done");
             self.EnableButtons(True)
             self.Update()
 
@@ -945,6 +962,11 @@ class PerformReflCalDialog(wx.Dialog):
     def EnableButtons(self, enable):
         for btn in self.btnList:
             btn.Enable(enable)
+        calStd = self.loadBox.GetCurrentSelection()
+        if calStd != 0:
+            self.openSpecTxt.Enable(enable)
+            self.shortSpecTxt.Enable(enable)
+            self.loadSpecTxt.Enable(enable)
 
     #--------------------------------------------------------------------------
     # Close or Cancel - quit any running calibration.
@@ -953,8 +975,11 @@ class PerformReflCalDialog(wx.Dialog):
         msa = self.frame.msa
         if msa.IsScanning():
             msa.StopScan()
+            self.abort = True
+            self.close = True
+        else:
             event.Skip()
-        self.Destroy()
+            self.Destroy()
 
     #--------------------------------------------------------------------------
     # Update button enables after a change.
