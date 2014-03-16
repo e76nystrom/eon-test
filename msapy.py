@@ -143,9 +143,7 @@ class MSASpectrumFrame(wx.Frame):
 
         # get preference values, using defaults if new
         p = self.prefs
-        p.get("fStart", -1.5)
-        p.get("fStop", 1.5)
-        p.get("nSteps", 400)
+
         self.markMHz = 0.
         self.fHdim = fHdim = 800 ; self.fVdim = fVdim = 600 # JGH 2/16/14
         #fHdim = 800 ; fVdim = 600
@@ -376,9 +374,12 @@ class MSASpectrumFrame(wx.Frame):
         p.get("stepAttenDB", 0)
         p.get("switchPulse", 0) # JGH added Oct23
         p.get("cftest", 0)
-        p.get("syntData",False)
+        p.get("syntData", False)
 
         # initialize spectrum graph
+        p.get("fStart", -1.5)
+        p.get("fStop", 1.5)
+        p.get("nSteps", 400)        
         va0 = p.get("va0", -120.)
         va1 = p.get("va1", 0.)
         specP.vScales = vScales = []

@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.0_JGH.a","3/10/2014"))
+SetModuleVersion("msa",("1.02","JGH.b","03/16/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -62,7 +62,7 @@ class MSA:
         self.bitsVideo = p.get("vFilterSelIndex", 2)
         self.cftest = p.get("cftest", False)
         # Trace blanking gap
-        self.bGap = p.get("bGap", False) 
+        self.bGap = p.get("bGap", False)
         
         # SG output frequency (MHz)
         self._sgout = 10.
@@ -197,9 +197,9 @@ class MSA:
 
     def _CalculateAllStepsForLO1Synth(self, thisfreq, band):
         self._GHzBand = band
-        if self._GHzBand != 1:
-            # get equivalent 1G frequency
-            thisfreq = self._Equiv1GFreq(thisfreq)
+##        if self._GHzBand != 1:
+##            # get equivalent 1G frequency
+        thisfreq = self._Equiv1GFreq(thisfreq)
         # calculate actual LO1 frequency
         LO1.Calculate(thisfreq + LO2.freq - self.finalfreq)
 
@@ -379,13 +379,19 @@ class MSA:
         p = self.frame.prefs
 
         if not hardwarePresent:
-            print ("\n>>>2462<<<    NO HARDWARE PRESENT")
+##            print ("\n>>>2462<<<    NO HARDWARE PRESENT")
+##            print ("\n>>>2463<<< GENERATING SYNTHETIC DATA") # JGH syndutHook2
             if p.syntData:
                 print ("\n>>>2463<<< GENERATING SYNTHETIC DATA") # JGH syndutHook2
                 from synDUT import SynDUTDialog
                 self.syndut = SynDUTDialog(self.gui)
                 wx.Yield()
                 self.gui.Raise()
+            else:
+                message("Hardware not present. If you want to run with "
+                        "Synthetic Data, use Hardware Configuration Manager "
+                        "to enable Synthetic Data.",
+                        caption="Hardware not Present")
 
         # Instantiate MSA's 3 local oscillators
         PLL1phasefreq = p.get("PLL1phasefreq", 0.974)
@@ -416,6 +422,7 @@ class MSA:
         LO3 = MSA_LO(3, 0., cb.P1_PLL3DataBit, cb.P2_le3, cb.P2_fqud3, PLL3phasefreq, \
                      PLL3phasepol, appxdds3, dds3filbw, PLL3type)
         SetLO3(LO3)
+
         # JGH change end
 
         # 5. Command Filter Bank to Path one. Begin with all data lines low
@@ -433,42 +440,63 @@ class MSA:
         # Frequency is commanded to zero
         LO3.ResetDDSserSLIM()
 
-        # 7.if configured, initialize PLO3. No frequency command yet.
-        # JGH starts 2/1/14
+        # JGH starts 3/16/14
+        # Precalculate all non-frequency dependent PLL parameters
+
+        # R counter, pdf
+        LO1.rcounter, LO1.pdf = LO1.CreateRcounter(LO1.appxdds)
+        print(">>>448<<< LO1.rcounter, LO1.pdf: ", LO1.rcounter, LO1.pdf)
+        LO2.rcounter, LO2.pdf = LO2.CreateRcounter(self.masterclock)
+        print(">>>450<<< LO2.rcounter, LO2.pdf: ", LO2.rcounter, LO2.pdf)
         LO3.rcounter, LO3.pdf = LO3.CreateRcounter(LO3.appxdds)
-        if debug:
-            print(">>>2533<<< Step7 LO3.rcounter, LO3.pdf: ", LO3.rcounter, LO3.pdf)
-        # JGH ends 2/1/14
+        print(">>>452<<<LO3.rcounter, LO3.pdf: ", LO3.rcounter, LO3.pdf)
+
+        # Ncounter
+        # (needs: PLL2 (aka appxVCO), rcounter, fcounter)
+        # (For LO2: creates: ncounter, fcounter(0))
+        # LO1 and LO3 are frequency dependent (see LO1.Calculate)
+        # LO2 is frequency dependent during the cavity filter test
+        appxVCO = self.appxLO2
+        LO2.CreateIntegerNcounter(appxVCO, self.masterclock)
+
+        # Nregister
+
+        # A counter, B counter, N bits
+        # LO1 and LO3 are frequency dependent
+        # LO2 is frequency dependent during the cavity filter test
+        # (needs: ncounter, fcounter, PLL2)
+        # (creates: Bcounter,Acounter, and N Bits N0-N23)
+        #LO1.CreatePLLN()
+        LO2.CreatePLLN()
+        #LO3.CreatePLLN()
+        # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+####        LO3.rcounter, LO3.pdf = LO3.CreateRcounter(LO3.appxdds)
+       
+        # 7. Once configured, initialize PLO3. No frequency command yet.
         LO3.CommandPLLR()
 
         # 8.initialize and command PLO2 to proper frequency
-
-        # CreatePLL2R (needs: appxpdf, masterclock)
-        LO2.rcounter, LO2.pdf = LO2.CreateRcounter(self.masterclock) # JGH starts 2/1/14
-        #                       (creates: rcounter, pdf)
-        if debug:
-            print(">>>2543<<< Step8 LO2.rcounter, LO2.pdf: ", LO2.rcounter, LO2.pdf)
-
+####        LO2.rcounter, LO2.pdf = LO2.CreateRcounter(self.masterclock)
         # Command PLL2R and Init Buffers (needs:PLL2phasepolarity,SELT,PLL2)
         LO2.CommandPLLR()
         # CreatePLL2N
-        appxVCO = self.appxLO2 # JGH: appxLO2 is the Hardware Config Dialog value
+####        appxVCO = self.appxLO2 # JGH: appxLO2 is the Hardware Config Dialog value
         # 8a. CreateIntegerNcounter(needs: PLL2 (aka appxVCO), rcounter, fcounter)
-        LO2.CreateIntegerNcounter(appxVCO, self.masterclock)
-        #                     (creates: ncounter, fcounter(0))
-        LO2.CreatePLLN()    # (needs: ncounter, fcounter, PLL2)
+####        LO2.CreateIntegerNcounter(appxVCO, self.masterclock)
+
+####        LO2.CreatePLLN()    # (needs: ncounter, fcounter, PLL2)
         #                     (creates: Bcounter,Acounter, and N Bits N0-N23)
         # 8b. Actual LO2 frequency
         LO2.freq = ((LO2.Bcounter*LO2.preselector) + LO2.Acounter + \
                     (LO2.fcounter/16))*LO2.pdf
-        if debug:
-            print(">>>2559<<< Step8b LO2.freq: ", LO2.freq)
+        print(">>>489<<< Step8b LO2.freq: ", LO2.freq)
+        
         # 8c. CommandPLL2N
         # needs:N23-N0,control,Jcontrol=SELT,port,contclear,LEPLL=8
         # commands N23-N0,old ControlBoard
         LO2.CommandPLL(LO2.PLLbits)
-        if debug:
-            print(">>>2566<<< Step8c LO2 commanded ******")
+        
         # 9.Initialize PLO 1. No frequency command yet.
         # CommandPLL1R and Init Buffers
         # needs:rcounter1,PLL1phasepolarity,SELT,PLL1
@@ -581,7 +609,7 @@ class MSA:
                 cb.Flush()
                 time.sleep(0)
                 self._ReadAD16Status()
-                if 0: # jGH 3/9/14
+                if 0: # JGH 3/9/14
                     self.LogEvent("CaptureOneStep got %06d" % self._magdata)
                 if self._magdata < goodPhaseMagThreshold:
                     doPhase = False
@@ -897,8 +925,10 @@ class MSA:
     def CreateSweepArray(self): # aka GEORGE
         global cb
         SweepArray = []
+        StepArray = []  # StepArray size = VariableList size
+        VarsArray = []  # VarsArray size = Number of steps
        
-        #p = self.frame.prefs
+        
         for f in self._freqs:
             band = min(max(int(f/1000) + 1, 1), 3) # JGH Values 1,2,3
             
@@ -933,11 +963,25 @@ class MSA:
                 # shift next bit into position
                 DDS3bits >>= 1; PLL3bits <<= 1; DDS1bits >>= 1; PLL1bits <<= 1
             SweepArray.append(byteList)
-        if 0:
-            print(">>>3015<<< arraySweeper finished with length: ", len(SweepArray))
 
+            # Build VarsArray
+            p = self.frame.prefs
+            if p.cftest == False:
+                LO2.ddsoutput = LO2.fcounter = 0
+            RealFinalIF = LO2.freq - 0
+            VarsArray = [LO1.ddsoutput, LO1.freq, LO1.pdf, LO1.ncounter, LO1.Bcounter, LO1.Acounter, \
+                         LO1.fcounter, LO1.rcounter, \
+                         LO2.ddsoutput, LO2.freq, LO2.pdf, LO2.ncounter, LO2.Bcounter, LO2.Acounter, \
+                         LO2.fcounter, LO2.rcounter, \
+                         LO3.ddsoutput, LO3.freq, LO3.pdf, LO3.ncounter, LO3.Bcounter, LO3.Acounter, \
+                         LO3.fcounter, LO3.rcounter, \
+                         RealFinalIF, self.masterclock]
+            StepArray.append(VarsArray)
+   
+        print(StepArray[350])
         #step1k = self.step1k ; step2k =self.step2k
         self.SweepArray = SweepArray
+        self.StepArray = StepArray
             
     #--------------------------------------------------------------------------
     # Stop current scan.
@@ -989,37 +1033,65 @@ class MSA:
     # Return a string of variables and their values for the Variables window.
 
     def GetVarsTextList(self):
-        step = max(self._step - 1, 0)
+        step = max(self._step - 1, 0) # JGH has a question about this line
+##        return [
+##            "this step = %d" % step,
+##            "dds1output = %0.9g MHz" % LO1.ddsoutput, # self.StepArray[step][0]
+##            "LO1 = %0.9g MHz" % LO1.freq, # self.StepArray[step][1]
+##            "pdf1 = %0.9g MHz" % LO1.pdf, # self.StepArray[step][2]
+##            "ncounter1 = %d" % LO1.ncounter, # self.StepArray[step][3]
+##            "Bcounter1 = %d" % LO1.Bcounter, # self.StepArray[step][4]
+##            "Acounter1 = %d" % LO1.Acounter, # self.StepArray[step][5]
+##            "fcounter1 = %d" % LO1.fcounter, # self.StepArray[step][6]
+##            "rcounter1 = %d" % LO1.rcounter, # self.StepArray[step][7]
+##            "LO2 = %0.6f MHz" % LO2.freq, # self.StepArray[step][9]
+##            "pdf2 = %0.6f MHz" % LO2.pdf, # self.StepArray[step][10]
+##            "ncounter2 = %d" % LO2.ncounter, # self.StepArray[step][11]
+##            "Bcounter2 = %d" % LO2.Bcounter, # self.StepArray[step][12]
+##            "Acounter2 = %d" % LO2.Acounter, # self.StepArray[step][13]
+##            "rcounter2 = %d" % LO2.rcounter, # self.StepArray[step][15]
+##            "dds3output = %0.9g MHz" % LO3.ddsoutput, # self.StepArray[step][16]
+##            "LO3 = %0.6f MHz" % LO3.freq, # self.StepArray[step][17]
+##            "pdf3 = %0.6f MHz" % LO3.pdf, # self.StepArray[step][18]
+##            "ncounter3 = %d" % LO3.ncounter, # self.StepArray[step][19]
+##            "Bcounter3 = %d" % LO3.Bcounter, # self.StepArray[step][20]
+##            "Acounter3 = %d" % LO3.Acounter, # self.StepArray[step][21]
+##            "fcounter3 = %d" % LO3.fcounter, # self.StepArray[step][22]
+##            "rcounter3 = %d" % LO3.rcounter, # self.StepArray[step][23]
+##            "Magdata=%d mag=%0.5g" % (self._magdata, self._Sdb),
+##            "Phadata=%d PDM=%0.5g" % (self._phasedata, self._Sdeg),
+##            "Real Final I.F. = %f" % (LO2.freq  - 0), # self.StepArray[step][24]
+##            "Masterclock = %0.6f" % self.masterclock # self.StepArray[step][25]
+##        ]
         return [
             "this step = %d" % step,
-            "dds1output = %0.9g MHz" % LO1.ddsoutput,
-            "LO1 = %0.9g MHz" % LO1.freq,
-            "pdf1 = %0.9g MHz" % LO1.pdf,
-            "ncounter1 = %d" % LO1.ncounter,
-            "Bcounter1 = %d" % LO1.Bcounter,
-            "Acounter1 = %d" % LO1.Acounter,
-            "fcounter1 = %d" % LO1.fcounter,
-            "rcounter1 = %d" % LO1.rcounter,
-            "LO2 = %0.6f MHz" % LO2.freq,
-            "pdf2 = %0.6f MHz" % LO2.pdf,
-            "ncounter2 = %d" % LO2.ncounter,
-            "Bcounter2 = %d" % LO2.Bcounter,
-            "Acounter2 = %d" % LO2.Acounter,
-            "rcounter2 = %d" % LO2.rcounter,
-            "LO3 = %0.6f MHz" % LO3.freq,
-            "pdf3 = %0.6f MHz" % LO3.pdf,
-            "ncounter3 = %d" % LO3.ncounter,
-            "Bcounter3 = %d" % LO3.Bcounter,
-            "Acounter3 = %d" % LO3.Acounter,
-            "fcounter3 = %d" % LO3.fcounter,
-            "rcounter3 = %d" % LO3.rcounter,
-            "dds3output = %0.9g MHz" % LO3.ddsoutput,
+            "dds1output = %0.9g MHz" % self.StepArray[step][0],
+            "LO1 = %0.9g MHz" % self.StepArray[step][1],
+            "pdf1 = %0.9g MHz" % self.StepArray[step][2],
+            "ncounter1 = %d" % self.StepArray[step][3],
+            "Bcounter1 = %d" % self.StepArray[step][4],
+            "Acounter1 = %d" % self.StepArray[step][5],
+            "fcounter1 = %d" % self.StepArray[step][6],
+            "rcounter1 = %d" % self.StepArray[step][7],
+            "LO2 = %0.6f MHz" % self.StepArray[step][9],
+            "pdf2 = %0.6f MHz" % self.StepArray[step][10],
+            "ncounter2 = %d" % self.StepArray[step][11],
+            "Bcounter2 = %d" % self.StepArray[step][12],
+            "Acounter2 = %d" % self.StepArray[step][13],
+            "rcounter2 = %d" % self.StepArray[step][15],
+            "dds3output = %0.9g MHz" % self.StepArray[step][16],
+            "LO3 = %0.6f MHz" % self.StepArray[step][17],
+            "pdf3 = %0.6f MHz" % self.StepArray[step][18],
+            "ncounter3 = %d" % self.StepArray[step][19],
+            "Bcounter3 = %d" % self.StepArray[step][20],
+            "Acounter3 = %d" % self.StepArray[step][21],
+            "fcounter3 = %d" % self.StepArray[step][22],
+            "rcounter3 = %d" % self.StepArray[step][23],
             "Magdata=%d mag=%0.5g" % (self._magdata, self._Sdb),
             "Phadata=%d PDM=%0.5g" % (self._phasedata, self._Sdeg),
-            "Real Final I.F. = %f" % (LO2.freq  - 0),
-            "Masterclock = %0.6f" % self.masterclock
+            "Real Final I.F. = %f" % self.StepArray[step][24],
+            "Masterclock = %0.6f" % self.StepArray[step][25]
         ]
-
     #--------------------------------------------------------------------------
     # Spectrum accessors.
 
@@ -1064,12 +1136,13 @@ class MSA_LO:
             print ("LO%d init: PDF=%f" % (id, PLLphasefreq))
 
         # PLL R counter
-        self.rcounter = int(round(divSafe(self.appxdds, self.PLLphasefreq)))
+##        self.rcounter = int(round(divSafe(self.appxdds, self.PLLphasefreq)))
+        self.CreateRcounter(self.appxdds)
 ##        if msa.spurcheck and not self.PLLmode:  # JGH 2/7/14 Fractional mode not used
         if GetMsa().spurcheck:
             self.rcounter += 1  # only do this for IntegerN PLL
 
-        self.pdf = 0        # phase detector frequency of PLL (MHz)
+            self.pdf = 0   # phase detector frequency of PLL (MHz)
 
 
     #--------------------------------------------------------------------------
@@ -1146,7 +1219,7 @@ class MSA_LO:
             # if preselector =64 then N22=1, N23=1
             self.CommandPLL((self.phasepolarity << 7) + 0x3 + (0x1 << 15)
                             + (0x1 << 18) + (0x1 << 23))
-            self.CommandPLL((self.rcounter << 2) + (0x1 << 22))
+            self.CommandPLL((self.rcounter << 2) + (0x1 << 23)) # changed from 22
 
     #--------------------------------------------------------------------------
     # Reset serial DDS without disturbing Filter Bank or PDM.
@@ -1232,19 +1305,19 @@ class MSA_LO:
             print ("ResetDDSserSLIM done")
 
     #--------------------------------------------------------------------------
-    # Create Fractional Mode N counter.
+    # Create Fractional Mode N counter. NOT USED ANY MORE
 
-    def _CreateFractionalNcounter(self, appxVCO, reference):
-        # approximates the Ncounter for PLL
-        ncount = divSafe(appxVCO, (reference/self.rcounter))
-        self.ncounter = int(ncount)
-        fcount = ncount - self.ncounter # EON Jan 29, 2014
-        self.fcounter = int(round(fcount*16))
-        if self.fcounter == 16:
-            self.ncounter += 1
-            self.fcounter = 0
-        # actual phase freq of PLL
-        self.pdf = divSafe(appxVCO, (self.ncounter + (self.fcounter/16)))
+##    def _CreateFractionalNcounter(self, appxVCO, reference):
+##        # approximates the Ncounter for PLL
+##        ncount = divSafe(appxVCO, (reference/self.rcounter))
+##        self.ncounter = int(ncount)
+##        fcount = ncount - self.ncounter # EON Jan 29, 2014
+##        self.fcounter = int(round(fcount*16))
+##        if self.fcounter == 16:
+##            self.ncounter += 1
+##            self.fcounter = 0
+##        # actual phase freq of PLL
+##        self.pdf = divSafe(appxVCO, (self.ncounter + (self.fcounter/16)))
 
     #--------------------------------------------------------------------------
     # Create Integer Mode N counter.
@@ -1253,8 +1326,8 @@ class MSA_LO:
         # approximates the Ncounter for PLL
         ncount = divSafe(appxVCO, divSafe(reference, self.rcounter))
         self.ncounter = int(round(ncount))
-        if debug:
-            print(">>>1345<<< appxVCO, reference, ncounter: ", \
+        if 1:
+            print(">>>1285<<< appxVCO, reference, ncounter: ", \
                   appxVCO, reference, self.ncounter)
         self.fcounter = 0
         # actual phase freq of PLL
@@ -1339,6 +1412,7 @@ class MSA_LO:
 
     #--------------------------------------------------------------------------
     # Calculate PLL and DDS settings for given frequency.
+    # Place the in an array indexed by _step
 
     def Calculate(self, freq):
         self.freq = freq
