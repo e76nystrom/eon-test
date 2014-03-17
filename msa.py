@@ -966,7 +966,7 @@ class MSA:
                          RealFinalIF, self.masterclock]
             StepArray.append(VarsArray)
    
-        #print(StepArray[011])
+        #print(StepArray[0])
         #step1k = self.step1k ; step2k =self.step2k
         self.SweepArray = SweepArray
         self.StepArray = StepArray
