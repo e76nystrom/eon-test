@@ -83,7 +83,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
-SetModuleVersion("msapy",("1.09","JGH.C","03/16/2014"))
+SetModuleVersion("msapy",("1.09","JGH.d","03/17/2014"))
 SetVersion(version)
 
 msa = None
@@ -373,7 +373,7 @@ class MSASpectrumFrame(wx.Frame):
         p.get("atten5", False)
         p.get("stepAttenDB", 0)
         p.get("switchPulse", 0) # JGH added Oct23
-        p.get("cftest", 0)
+        p.get("cftest", False) ; p.cftest = False
         p.get("syntData", False)
 
         # initialize spectrum graph
@@ -422,7 +422,7 @@ class MSASpectrumFrame(wx.Frame):
         self.screenWidth, self.screenHeight = wx.Display().GetGeometry()[2:4]
 
         # Initialize cavity filter test status # JGH 1/26/14
-        self.cftest = 0
+        self.cftest = False
 
         # restore markers from preferences
         for attr, value in p.__dict__.items():

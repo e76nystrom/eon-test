@@ -9,7 +9,7 @@ from msa import MSA
 from marker import Marker
 from util import MHz, ns, si, SI_NO,StdScale
 
-SetModuleVersion("graphPanel",("1.04","EON","03/16/2014"))
+SetModuleVersion("graphPanel",("1.04","JGH.d","03/17/2014"))
 
 #==============================================================================
 # A graph of a set of traces.
@@ -484,8 +484,12 @@ class GraphPanel(wx.Panel):
                     fixName = "Shunt"
                 dc.DrawText("Fixture=%s" % fixName, xinfo, yinfo + y*dyText)
                 y += 1
+##            if p.cftest == True:
+##                dc.DrawText("CFfilter test is ON", xinfo, yinfo + y*dyText)
+##                y += 1
             dc.DrawText("Vers %s" % GetVersion(), xinfo, yinfo + y*dyText)
             y += 1
+            
 
             # draw optional results text box
             if self.results:

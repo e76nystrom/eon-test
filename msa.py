@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.03","JGH.C","03/17/2014"))
+SetModuleVersion("msa",("1.02","JGH.d","03/17/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -572,10 +572,9 @@ class MSA:
                 self._CommandAllSlims()
 
     # ------------------------------------------------------------------------------
-                if p.cftest == 1:
+                if p.cftest == True:
 ##                      cavityLO2 = self.finalfreq + LO1.freq
                     cavityLO2 =1013.3 + self.finalfreq + f
-                    print ("freq: ", f)
                     LO2.CreateIntegerNcounter(cavityLO2, self.masterclock)
                     LO2.CreatePLLN()
                     LO2.freq = ((LO2.Bcounter*LO2.preselector) + LO2.Acounter+(LO2.fcounter/16))*LO2.pdf
@@ -863,9 +862,12 @@ class MSA:
         self.step1k = self.step2k = None            
         for x, y in enumerate(self._freqs):
             if y == 1000:
-                self.step1k = x ; print("1000 is at step #", x)
+                self.step1k = x
             if y == 2000:
-                self.step2k = x ; print("2000 is at step #", x)
+                self.step2k = x 
+        if debug:
+            print("1000 is at step #", self.step1k)
+            print("2000 is at step #", self.step2k)
 
     #--------------------------------------------------------------------------
     # Start an asynchronous scan of a spectrum. The results may be read at
@@ -894,14 +896,14 @@ class MSA:
         self.LogEvent("ContinueScan: step=%d" % self._step)
         if hardwarePresent or self.syndut != None:
             if not self._scanning:
-                self.CreateSweepArray() # Creates GEORGE
+                self.CreateSweepArray() # Creates SweepArray
                 self.LogEvent("ContinueScan start_new_thread")
                 self.scanEnabled = self._scanning = True
                 thread.start_new_thread(self._ScanThread, ())
             self.LogEvent("ContinueScan exit")
 
     #--------------------------------------------------------------------------
-    # SweepArray
+    # SweepArray and StepArray # JGH all new code 3/15/14
     # (send data and clocks without changing Filter Bank)
     #  0-15 is DDS1bit*4 + DDS3bit*16, data = 0 to PLL 1 and PLL 3.
     # (see CreateCmdAllArray). new Data with no clock,latch high,latch low,
@@ -910,12 +912,11 @@ class MSA:
     # This format guarantees that the common clock will
     # not transition with a data transition, preventing crosstalk in LPT cable.
 
-    def CreateSweepArray(self): # aka GEORGE
+    def CreateSweepArray(self): 
         global cb
-        SweepArray = []
-        StepArray = []  # StepArray size = VariableList size
-        VarsArray = []  # VarsArray size = Number of steps
-       
+        SweepArray = [] # aka GEORGE
+        VarsArray = []  # VarsArray size = VariableList size  # aka MARTHA
+        StepArray = []  # StepArray size = Number of steps # aka BIG BERTHA
         
         for f in self._freqs:
             band = min(max(int(f/1000) + 1, 1), 3) # JGH Values 1,2,3
@@ -957,7 +958,8 @@ class MSA:
             if p.cftest == False:
                 LO2.ddsoutput = LO2.fcounter = 0
             RealFinalIF = LO2.freq - 0
-            VarsArray = [LO1.ddsoutput, LO1.freq, LO1.pdf, LO1.ncounter, LO1.Bcounter, LO1.Acounter, \
+            VarsArray = [f, \
+                         LO1.ddsoutput, LO1.freq, LO1.pdf, LO1.ncounter, LO1.Bcounter, LO1.Acounter, \
                          LO1.fcounter, LO1.rcounter, \
                          LO2.ddsoutput, LO2.freq, LO2.pdf, LO2.ncounter, LO2.Bcounter, LO2.Acounter, \
                          LO2.fcounter, LO2.rcounter, \
@@ -966,7 +968,7 @@ class MSA:
                          RealFinalIF, self.masterclock]
             StepArray.append(VarsArray)
    
-        #print(StepArray[0])
+##        print(StepArray[350])
         #step1k = self.step1k ; step2k =self.step2k
         self.SweepArray = SweepArray
         self.StepArray = StepArray
@@ -1021,36 +1023,83 @@ class MSA:
     # Return a string of variables and their values for the Variables window.
 
     def GetVarsTextList(self):
+        p = self.frame.prefs
         step = max(self._step - 1, 0) # JGH has a question about this line
-        return [
+        Alist = [
             "this step = %d" % step,
-            "dds1output = %0.9g MHz" % self.StepArray[step][0],
-            "LO1 = %0.9g MHz" % self.StepArray[step][1],
-            "pdf1 = %0.9g MHz" % self.StepArray[step][2],
-            "ncounter1 = %d" % self.StepArray[step][3],
-            "Bcounter1 = %d" % self.StepArray[step][4],
-            "Acounter1 = %d" % self.StepArray[step][5],
-            "fcounter1 = %d" % self.StepArray[step][6],
-            "rcounter1 = %d" % self.StepArray[step][7],
-            "LO2 = %0.6f MHz" % self.StepArray[step][9],
-            "pdf2 = %0.6f MHz" % self.StepArray[step][10],
-            "ncounter2 = %d" % self.StepArray[step][11],
-            "Bcounter2 = %d" % self.StepArray[step][12],
-            "Acounter2 = %d" % self.StepArray[step][13],
-            "rcounter2 = %d" % self.StepArray[step][15],
-            "dds3output = %0.9g MHz" % self.StepArray[step][16],
-            "LO3 = %0.6f MHz" % self.StepArray[step][17],
-            "pdf3 = %0.6f MHz" % self.StepArray[step][18],
-            "ncounter3 = %d" % self.StepArray[step][19],
-            "Bcounter3 = %d" % self.StepArray[step][20],
-            "Acounter3 = %d" % self.StepArray[step][21],
-            "fcounter3 = %d" % self.StepArray[step][22],
-            "rcounter3 = %d" % self.StepArray[step][23],
+            "frequency = %0.6g MHz" % self.StepArray[step][0],
+            "dds1output = %0.9g MHz" % self.StepArray[step][1],
+            "LO1 = %0.9g MHz" % self.StepArray[step][2],
+            "pdf1 = %0.9g MHz" % self.StepArray[step][3],
+            "ncounter1 = %d" % self.StepArray[step][4],
+            "Bcounter1 = %d" % self.StepArray[step][5],
+            "Acounter1 = %d" % self.StepArray[step][6],
+            "fcounter1 = %d" % self.StepArray[step][7],
+            "rcounter1 = %d" % self.StepArray[step][8]
+            ]
+        if p.cftest == False:
+            Blist = ["LO2 = %0.6f MHz" % self.StepArray[step][10],
+            "pdf2 = %0.6f MHz" % self.StepArray[step][11],
+            "ncounter2 = %d" % self.StepArray[step][12],
+            "Bcounter2 = %d" % self.StepArray[step][13],
+            "Acounter2 = %d" % self.StepArray[step][14],
+            "rcounter2 = %d" % self.StepArray[step][16]
+            ]
+        elif p.cftest == True:
+            Blist = ["LO2 = %0.6f MHz" % LO2.freq,
+            "pdf2 = %0.6f MHz" % LO2.pdf,
+            "ncounter2 = %d" % LO2.ncounter,
+            "Bcounter2 = %d" % LO2.Bcounter,
+            "Acounter2 = %d" % LO2.Acounter,
+            "rcounter2 = %d" % LO2.rcounter
+            ]
+        Clist = ["dds3output = %0.9g MHz" % self.StepArray[step][17],
+            "LO3 = %0.6f MHz" % self.StepArray[step][18],
+            "pdf3 = %0.6f MHz" % self.StepArray[step][19],
+            "ncounter3 = %d" % self.StepArray[step][20],
+            "Bcounter3 = %d" % self.StepArray[step][21],
+            "Acounter3 = %d" % self.StepArray[step][22],
+            "fcounter3 = %d" % self.StepArray[step][23],
+            "rcounter3 = %d" % self.StepArray[step][24],
             "Magdata=%d mag=%0.5g" % (self._magdata, self._Sdb),
             "Phadata=%d PDM=%0.5g" % (self._phasedata, self._Sdeg),
-            "Real Final I.F. = %f" % self.StepArray[step][24],
-            "Masterclock = %0.6f" % self.StepArray[step][25]
-        ]
+            "Real Final I.F. = %f" % self.StepArray[step][25],
+            "Masterclock = %0.6f" % self.StepArray[step][26]
+            ]
+        Blist.extend(Clist)
+        Alist.extend(Blist)
+        return Alist
+        
+##        return [
+##            "this step = %d" % step,
+##            "frequency = %0.6g MHz" % self.StepArray[step][0],
+##            "dds1output = %0.9g MHz" % self.StepArray[step][1],
+##            "LO1 = %0.9g MHz" % self.StepArray[step][2],
+##            "pdf1 = %0.9g MHz" % self.StepArray[step][3],
+##            "ncounter1 = %d" % self.StepArray[step][4],
+##            "Bcounter1 = %d" % self.StepArray[step][5],
+##            "Acounter1 = %d" % self.StepArray[step][6],
+##            "fcounter1 = %d" % self.StepArray[step][7],
+##            "rcounter1 = %d" % self.StepArray[step][8],
+##            "LO2 = %0.6f MHz" % self.StepArray[step][10],
+##            "pdf2 = %0.6f MHz" % self.StepArray[step][11],
+##            "ncounter2 = %d" % self.StepArray[step][12],
+##            "Bcounter2 = %d" % self.StepArray[step][13],
+##            "Acounter2 = %d" % self.StepArray[step][14],
+##            "rcounter2 = %d" % self.StepArray[step][16],
+##            "dds3output = %0.9g MHz" % self.StepArray[step][17],
+##            "LO3 = %0.6f MHz" % self.StepArray[step][18],
+##            "pdf3 = %0.6f MHz" % self.StepArray[step][19],
+##            "ncounter3 = %d" % self.StepArray[step][20],
+##            "Bcounter3 = %d" % self.StepArray[step][21],
+##            "Acounter3 = %d" % self.StepArray[step][22],
+##            "fcounter3 = %d" % self.StepArray[step][23],
+##            "rcounter3 = %d" % self.StepArray[step][24],
+##            "Magdata=%d mag=%0.5g" % (self._magdata, self._Sdb),
+##            "Phadata=%d PDM=%0.5g" % (self._phasedata, self._Sdeg),
+##            "Real Final I.F. = %f" % self.StepArray[step][25],
+##            "Masterclock = %0.6f" % self.StepArray[step][26]
+##        ]
     #--------------------------------------------------------------------------
     # Spectrum accessors.
 
