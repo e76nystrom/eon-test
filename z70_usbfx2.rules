@@ -1,0 +1,3 @@
+SUBSYSTEM=="usb", ACTION=="add", ATTR{idVendor}=="04b4", ATTR{idProduct}=="8613", GROUP="plugdev", MODE="0666"
+
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="04b4", ATTRS{idProduct}=="8613", DRIVERS=="usbtest", RUN+="/bin/sh -c 'echo n %k> %S/%p/driver/unbind'"
