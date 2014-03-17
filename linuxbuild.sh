@@ -15,9 +15,9 @@ then
  sudo cp $fil.txt $dst/$fil.py
 fi
 rm -rf build
-rm -rf dist
+rm -rf msapy
 pyinstaller linuxmsapy.spec -F
-cp cycfx2prog dist
-cp usbpar.ihx dist
-cd dist
-tar czf ../msapy.tar.gz *
+mv dist msapy
+cp cycfx2prog msapy
+cp usbpar.ihx msapy
+tar czf msapy.tar.gz msapy
