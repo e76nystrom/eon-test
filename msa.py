@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.02","JGH.b","03/16/2014"))
+SetModuleVersion("msa",("1.02","JGH.C","03/17/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -379,10 +379,8 @@ class MSA:
         p = self.frame.prefs
 
         if not hardwarePresent:
-##            print ("\n>>>2462<<<    NO HARDWARE PRESENT")
-##            print ("\n>>>2463<<< GENERATING SYNTHETIC DATA") # JGH syndutHook2
             if p.syntData:
-                print ("\n>>>2463<<< GENERATING SYNTHETIC DATA") # JGH syndutHook2
+##                print ("\n>>>2463<<< GENERATING SYNTHETIC DATA") # JGH syndutHook2
                 from synDUT import SynDUTDialog
                 self.syndut = SynDUTDialog(self.gui)
                 wx.Yield()
@@ -445,11 +443,8 @@ class MSA:
 
         # R counter, pdf
         LO1.rcounter, LO1.pdf = LO1.CreateRcounter(LO1.appxdds)
-        print(">>>448<<< LO1.rcounter, LO1.pdf: ", LO1.rcounter, LO1.pdf)
         LO2.rcounter, LO2.pdf = LO2.CreateRcounter(self.masterclock)
-        print(">>>450<<< LO2.rcounter, LO2.pdf: ", LO2.rcounter, LO2.pdf)
         LO3.rcounter, LO3.pdf = LO3.CreateRcounter(LO3.appxdds)
-        print(">>>452<<<LO3.rcounter, LO3.pdf: ", LO3.rcounter, LO3.pdf)
 
         # Ncounter
         # (needs: PLL2 (aka appxVCO), rcounter, fcounter)
@@ -490,7 +485,6 @@ class MSA:
         # 8b. Actual LO2 frequency
         LO2.freq = ((LO2.Bcounter*LO2.preselector) + LO2.Acounter + \
                     (LO2.fcounter/16))*LO2.pdf
-        print(">>>489<<< Step8b LO2.freq: ", LO2.freq)
         
         # 8c. CommandPLL2N
         # needs:N23-N0,control,Jcontrol=SELT,port,contclear,LEPLL=8
@@ -567,7 +561,6 @@ class MSA:
         step = self._step
         self.LogEvent("CaptureOneStep %d" % step)
         f = self._freqs[step]
-##        print (">>>2572<<< step: ", step , ", f: ", f)
         if f < -48:
             Sdb = nan
             Sdeg = nan
@@ -978,7 +971,7 @@ class MSA:
                          RealFinalIF, self.masterclock]
             StepArray.append(VarsArray)
    
-        print(StepArray[350])
+        #print(StepArray[011])
         #step1k = self.step1k ; step2k =self.step2k
         self.SweepArray = SweepArray
         self.StepArray = StepArray
@@ -1034,35 +1027,6 @@ class MSA:
 
     def GetVarsTextList(self):
         step = max(self._step - 1, 0) # JGH has a question about this line
-##        return [
-##            "this step = %d" % step,
-##            "dds1output = %0.9g MHz" % LO1.ddsoutput, # self.StepArray[step][0]
-##            "LO1 = %0.9g MHz" % LO1.freq, # self.StepArray[step][1]
-##            "pdf1 = %0.9g MHz" % LO1.pdf, # self.StepArray[step][2]
-##            "ncounter1 = %d" % LO1.ncounter, # self.StepArray[step][3]
-##            "Bcounter1 = %d" % LO1.Bcounter, # self.StepArray[step][4]
-##            "Acounter1 = %d" % LO1.Acounter, # self.StepArray[step][5]
-##            "fcounter1 = %d" % LO1.fcounter, # self.StepArray[step][6]
-##            "rcounter1 = %d" % LO1.rcounter, # self.StepArray[step][7]
-##            "LO2 = %0.6f MHz" % LO2.freq, # self.StepArray[step][9]
-##            "pdf2 = %0.6f MHz" % LO2.pdf, # self.StepArray[step][10]
-##            "ncounter2 = %d" % LO2.ncounter, # self.StepArray[step][11]
-##            "Bcounter2 = %d" % LO2.Bcounter, # self.StepArray[step][12]
-##            "Acounter2 = %d" % LO2.Acounter, # self.StepArray[step][13]
-##            "rcounter2 = %d" % LO2.rcounter, # self.StepArray[step][15]
-##            "dds3output = %0.9g MHz" % LO3.ddsoutput, # self.StepArray[step][16]
-##            "LO3 = %0.6f MHz" % LO3.freq, # self.StepArray[step][17]
-##            "pdf3 = %0.6f MHz" % LO3.pdf, # self.StepArray[step][18]
-##            "ncounter3 = %d" % LO3.ncounter, # self.StepArray[step][19]
-##            "Bcounter3 = %d" % LO3.Bcounter, # self.StepArray[step][20]
-##            "Acounter3 = %d" % LO3.Acounter, # self.StepArray[step][21]
-##            "fcounter3 = %d" % LO3.fcounter, # self.StepArray[step][22]
-##            "rcounter3 = %d" % LO3.rcounter, # self.StepArray[step][23]
-##            "Magdata=%d mag=%0.5g" % (self._magdata, self._Sdb),
-##            "Phadata=%d PDM=%0.5g" % (self._phasedata, self._Sdeg),
-##            "Real Final I.F. = %f" % (LO2.freq  - 0), # self.StepArray[step][24]
-##            "Masterclock = %0.6f" % self.masterclock # self.StepArray[step][25]
-##        ]
         return [
             "this step = %d" % step,
             "dds1output = %0.9g MHz" % self.StepArray[step][0],
@@ -1230,7 +1194,7 @@ class MSA_LO:
         # pin4=D0=1, D3-D7 are don# t care. this will reset DDS into
         # parallel, invoke serial mode, then command to 0 Hz.
         if debug:
-            print ("XXXXX 996, ResetDDSserSLIM XXXXX")
+            print (">>>1201<<< ResetDDSserSLIM")
         pdmcmd = GetMsa().invPhase << cb.P2_pdminvbit
         #bitsRBW = msa.bitsRBW
 
@@ -1274,16 +1238,6 @@ class MSA_LO:
         # FQUD up, FQUD down present data to buffer,latch buffer,disable
         # buffer, present data+clk to buffer,latch buffer,disable buffer
 
-        # JGH the following block, changed to the next below
-##        a = bitsRBW
-##        for i in range(40):
-##            # data with clock low
-##            cb.SetP(1, a)
-##            # data with clock high
-##            cb.SetP(1, a + cb.P1_Clk)
-##        # leaving bitsRBW latched
-##        cb.SetP(1, a)
-
         #a = 0
         for i in range(40):
             # data with clock low
@@ -1305,29 +1259,14 @@ class MSA_LO:
             print ("ResetDDSserSLIM done")
 
     #--------------------------------------------------------------------------
-    # Create Fractional Mode N counter. NOT USED ANY MORE
-
-##    def _CreateFractionalNcounter(self, appxVCO, reference):
-##        # approximates the Ncounter for PLL
-##        ncount = divSafe(appxVCO, (reference/self.rcounter))
-##        self.ncounter = int(ncount)
-##        fcount = ncount - self.ncounter # EON Jan 29, 2014
-##        self.fcounter = int(round(fcount*16))
-##        if self.fcounter == 16:
-##            self.ncounter += 1
-##            self.fcounter = 0
-##        # actual phase freq of PLL
-##        self.pdf = divSafe(appxVCO, (self.ncounter + (self.fcounter/16)))
-
-    #--------------------------------------------------------------------------
     # Create Integer Mode N counter.
 
     def CreateIntegerNcounter(self, appxVCO, reference):
         # approximates the Ncounter for PLL
         ncount = divSafe(appxVCO, divSafe(reference, self.rcounter))
         self.ncounter = int(round(ncount))
-        if 1:
-            print(">>>1285<<< appxVCO, reference, ncounter: ", \
+        if 0:
+            print(">>>1269<<< appxVCO, reference, ncounter: ", \
                   appxVCO, reference, self.ncounter)
         self.fcounter = 0
         # actual phase freq of PLL
@@ -1422,11 +1361,6 @@ class MSA_LO:
             print ("LO%d: freq=" % self.id, freq, "ref=", reference, \
                 "rcounter=", self.rcounter)
 
-##        if self.PLLmode: # PLLmode not used, always Integer
-##            self._CreateFractionalNcounter(appxVCO, reference)
-##        else:
-##            self.CreateIntegerNcounter(appxVCO, reference)
-##            self.pdf = divSafe(appxVCO, self.ncounter) # JGH 2/2/14
         # JGH 2/7/14
         self.CreateIntegerNcounter(appxVCO, reference)
         self.pdf = divSafe(appxVCO, self.ncounter) # JGH 2/2/14

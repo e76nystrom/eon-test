@@ -7,7 +7,7 @@ from util import StartStopToCentSpan, CentSpanToStartStop
 from stepAtten import SetStepAttenuator
 from theme import DarkTheme, LightTheme
 
-SetModuleVersion("sweepDialog",("1.02","EON","03/14/2014"))
+SetModuleVersion("sweepDialog",("1.02","JGH.C","03/14/2014"))
 
 debug = False
 
@@ -535,12 +535,6 @@ class SweepDialog(wx.Dialog):
         (msa.finalfreq, msa.finalbw) = p.RBWFilters[p.indexRBWSel]
         p.rbw = msa.finalbw # JGH added
         p.switchRBW = p.indexRBWSel
-##        msa.bitsRBW = self.bitsRBW = 4 * p.switchRBW
-##        if debug: # JGH Same prints, different location. Will be removed
-##            print (">>>6965<<< p.RBWFilters[p.indexRBWSel]: ", \
-##                   p.RBWFilters[p.indexRBWSel])
-##            print (">>> 6967 <<<< p.rbw: ", p.rbw)
-##            print (">>>6968<<< bitsRBW: ", msa.bitsRBW)
 
         self.calculateWait
 
@@ -550,17 +544,6 @@ class SweepDialog(wx.Dialog):
 
         p.vFilterSelIndex = self.vFilterSelIndex
         p.vFilterSelName = self.vFilterSelName
-##        msa.bitsVideo = self.bitsVideo = 1 * p.vFilterSelIndex
-##        if debug:
-##            print (">>>7205<<< bitsVideo: ", msa.bitsVideo)
-##
-##        msa.bitsBand = 64 * self.switchBand
-##
-##        msa.bitsFR = 16 * self.switchFR
-##
-##        msa.bitsTR = 32 * self.switchTR
-##
-##        msa.bitsPulse = 128 * self.switchPulse
 
         p.graphAppear = self.graphAppear.GetValue()
         p.theme = (DarkTheme, LightTheme)[p.graphAppear == "Light"]
@@ -594,13 +577,10 @@ class SweepDialog(wx.Dialog):
                 print ("waitBox: ", self.waitBox.GetValue())
         else:
             p.wait = int(self.waitTB.GetValue())
-#        if p.wait > 255:
-#            p.wait = 255
-#            self.waitBox.SetValue(str(p.wait))
+
         if p.wait < 0:
             p.wait = 0
             self.waitTB.SetValue(str(p.wait))
-##        p.autoWait = self.autoWaitCB.GetValue() #JGH 11/27/13 remmed out
 
         p.isLogF = self.logRB.GetValue()
         self.AdjFreqTextBoxes(final=True)
@@ -627,8 +607,6 @@ class SweepDialog(wx.Dialog):
             return False
 
         frame.StopScanAndWait()
-##        cb.SetP(4, msa.bitsVideo + msa.bitsRBW + msa.bitsFR +
-##                msa.bitsTR + msa.bitsBand + msa.bitsPulse)
 
         msa.NewScanSettings(p)
         frame.spectrum = None

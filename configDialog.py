@@ -5,7 +5,7 @@ import wx.grid
 from wx.lib.dialogs import ScrolledMessageDialog
 from util import gstr, mu
 
-SetModuleVersion("configDialog",("1.02","EON","03/16/2014"))
+SetModuleVersion("configDialog",("1.02","JGH.C","03/17/2014"))
 
 #==============================================================================
 # The MSA/VNA Configuration Manager dialog box (also modal) # JGH
@@ -117,7 +117,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         self.tcPhF3 = tcPhF3
         sizerG1.Add(tcPhF3, (6, 2), flag=c)
 
-        # JGH 2/15/14: PLL mode no longer used
+        # JGH 2/15/14: PLL fractional mode no longer used
 
         cvl = wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT
         #cvr = wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_RIGHT
@@ -176,7 +176,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         st = wx.StaticText(self, -1,  "Max PDM out" )
         sizerG1.Add(st, (13, 0), (1, 1), chbt, 10)
         maxPDMout = wx.TextCtrl(self, -1, gstr(2**16-1), size=tsz)
-        maxPDMout.Enable(True) # JGH changed to True
+        maxPDMout.Enable(True) 
         self.maxPDMout = maxPDMout
         sizerG1.Add(maxPDMout, (14, 0), flag=c)
 
@@ -228,7 +228,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         gr.SetDefaultCellAlignment(wx.ALIGN_RIGHT, wx.ALIGN_CENTRE)
         gr.EnableEditing(1)
         sizerV2A.Add(gr, 0, wx.ALIGN_CENTER) # JGH 1/28/14
-##      The next two lines might be needed later
+##      The next two lines might be needed in the future
 ##        gr.Bind(wx.grid.EVT_GRID_SELECT_CELL, self.OnRBWCellSel)
 ##        gr.Bind(wx.grid.EVT_GRID_LABEL_LEFT_CLICK, self.OnRBWLabelSel)
 
@@ -443,16 +443,6 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
 
     def OnModOK(self, event=None):
         pass
-
-    #--------------------------------------------------------------------------
-
-#    def AllowSyntData(self, event):
-#        sender = event.GetEventObject()
-#        p = self.frame.prefs
-#        if sender.GetValue() == 0:  # Do not use
-#            p.syntData = False
-#        else:
-#            p.syntData = True  # Allow
 
     #--------------------------------------------------------------------------
     # Present Help dialog.

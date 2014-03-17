@@ -83,7 +83,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
-SetModuleVersion("msapy",("1.09","EON","03/16/2014"))
+SetModuleVersion("msapy",("1.09","JGH.C","03/16/2014"))
 SetVersion(version)
 
 msa = None
@@ -1286,7 +1286,7 @@ class MSASpectrumFrame(wx.Frame):
             return
         path = dlg.GetPath()
         p.dataDir = os.path.dirname(path)
-        print ("Reading", path)
+##        print ("Reading", path)
         spec = self.spectrum = Spectrum.FromS1PFile(path)
         specP = self.specP
         specP.h0 = p.fStart = spec.Fmhz[0]  # EON Jan 10 2014
