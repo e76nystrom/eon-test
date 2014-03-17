@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.02","JGH.C","03/17/2014"))
+SetModuleVersion("msa",("1.03","EON","03/17/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -385,11 +385,6 @@ class MSA:
                 self.syndut = SynDUTDialog(self.gui)
                 wx.Yield()
                 self.gui.Raise()
-            else:
-                message("Hardware not present. If you want to run with "
-                        "Synthetic Data, use Hardware Configuration Manager "
-                        "to enable Synthetic Data.",
-                        caption="Hardware not Present")
 
         # Instantiate MSA's 3 local oscillators
         PLL1phasefreq = p.get("PLL1phasefreq", 0.974)
