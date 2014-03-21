@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.02","JGH.d","03/17/2014"))
+SetModuleVersion("msa",("1.03","EON","03/21/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -37,6 +37,8 @@ class MSA:
     shortModeNames = ("SA", "SATG", "VNATran", "VNARefl")
 
     def __init__(self, frame):
+        global msa
+        msa = self
         self.frame = frame
         p = frame.prefs
         self.mode = p.get("mode", self.MODE_SA) # JGH: This is the default mode for EON
@@ -1398,6 +1400,7 @@ class MSA_LO:
     # Place the in an array indexed by _step
 
     def Calculate(self, freq):
+        global msa
         self.freq = freq
         appxVCO = freq
         reference = self.appxdds
@@ -1496,7 +1499,7 @@ class MSA_LO:
         # (AD9850, 9851, or any 32 bit DDS) is taken from:
         # ddsoutput = base*msa.masterclock/2^32
         # rounded off to the nearest whole bit
-        base = int(round(divSafe(self.ddsoutput * (1<<32), GetMsa().masterclock))) # JGH 2/2/14
+        base = int(round(divSafe(self.ddsoutput * (1<<32), msa.masterclock))) # JGH 2/2/14
         self.DDSbits = base
         if debug:
             print ("LO%d: base=%f=0x%x" % (self.id, base, base))

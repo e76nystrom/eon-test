@@ -7,7 +7,7 @@ from util import StartStopToCentSpan, CentSpanToStartStop
 from stepAtten import SetStepAttenuator
 from theme import DarkTheme, LightTheme
 
-SetModuleVersion("sweepDialog",("1.02","JGH.C","03/14/2014"))
+SetModuleVersion("sweepDialog",("1.03","EON","03/21/2014"))
 
 debug = False
 
@@ -615,7 +615,8 @@ class SweepDialog(wx.Dialog):
         LogGUIEvent("Apply: new spectrum")
         frame.ReadCalPath()
         frame.ReadCalFreq()
-        specP.FullRefresh()
+        frame.ScanPrecheck(scan=False)
+        msa.scanResults.put((0, 0, 0, 0, 0, 0, 0, 0, 0))
         return True
 
     #--------------------------------------------------------------------------

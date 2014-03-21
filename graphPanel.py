@@ -9,7 +9,7 @@ from msa import MSA
 from marker import Marker
 from util import MHz, ns, si, SI_NO,StdScale
 
-SetModuleVersion("graphPanel",("1.04","JGH.d","03/17/2014"))
+SetModuleVersion("graphPanel",("1.05","EON","03/21/2014"))
 
 #==============================================================================
 # A graph of a set of traces.
@@ -248,7 +248,7 @@ class GraphPanel(wx.Panel):
                 units = vaUnits
             else:
                 v0, v1 = vb0, vb1
-                vDiv = vs1.Div
+                vDiv = vs1.div
                 units = vbUnits
 
             if vDiv == 0 and units != "Deg":
@@ -805,13 +805,19 @@ class GraphPanel(wx.Panel):
                         isPos = m.name != "P-"
                         ydir = 2*isPos - 1
                         yq =  ydir * q
+                        (tw, th) = dc.GetTextExtent(m.name)
+                        tx = x-tw/2
+                        ty = y-yq - (ydir+1)*(th+2)/2 + 1
+                        if (ty - 1) <= y0:
+                            yq =  -q
+                            ty = y - yq + 1
+                        elif (ty + th + 1) >= y1:
+                            yq = q
+                            ty = y - yq - th - 1
                         dc.SetPen(linePen)
                         dc.DrawLine(x, y, x-q, y-yq)
                         dc.DrawLine(x-q, y-yq, x+q, y-yq)
                         dc.DrawLine(x+q, y-yq, x, y)
-                        (tw, th) = dc.GetTextExtent(m.name)
-                        tx = x-tw/2
-                        ty = y-yq - (ydir+1)*(th+2)/2 + 1
                         dc.SetPen(backPen)
                         dc.DrawRectangle(tx, ty, tw, th)
                         dc.DrawText(m.name, tx, ty)

@@ -83,7 +83,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
-SetModuleVersion("msapy",("1.09","JGH.d","03/17/2014"))
+SetModuleVersion("msapy",("1.10","EON","03/21/2014"))
 SetVersion(version)
 
 msa = None
@@ -573,7 +573,7 @@ class MSASpectrumFrame(wx.Frame):
     #--------------------------------------------------------------------------
     # Start capturing a spectrum.
 
-    def ScanPrecheck(self, haltAtEnd):
+    def ScanPrecheck(self, haltAtEnd=False, scan=True):
         global msa
         self.StopScanAndWait()
         ResetEvents()
@@ -615,7 +615,8 @@ class MSASpectrumFrame(wx.Frame):
             self.RefreshAllParms()
 
         # tell MSA hardware backend to start a scan
-        msa.ConfigForScan(self, p, haltAtEnd)
+        if scan:
+            msa.ConfigForScan(self, p, haltAtEnd)
 
         if not GetHardwarePresent() and not msa.syndut:
             msa.scanResults.put((0, 0, 0, 0, 0, 0, 0, 0, 0))
