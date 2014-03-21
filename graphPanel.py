@@ -8,6 +8,7 @@ from theme import red, blue
 from msa import MSA
 from marker import Marker
 from util import MHz, ns, si, SI_NO,StdScale
+import json
 
 SetModuleVersion("graphPanel",("1.04","JGH.d","03/17/2014"))
 
@@ -48,6 +49,7 @@ class GraphPanel(wx.Panel):
         self.dbDownBy = 3           # dB down-by level to put L, R markers
         self.isAbs = False          # set if dbDownBy is an absolute level
         self.bind = False # EON Jan 12 2014
+        self.web = True
 
         wx.Panel.__init__(self, parent, -1)
         self.SetBackgroundColour(p.theme.backColor)
@@ -97,6 +99,10 @@ class GraphPanel(wx.Panel):
     def OnErase(self, event):
         pass
 
+    def setColor(self, color):
+        return ("y","#%02x%02x%02x" % \
+                (color.Red(),color.Green(),color.Blue()))
+
     def OnPaint(self, event):
         global msa, fontSize
         LogGUIEvent("OnPaint")
@@ -117,6 +123,7 @@ class GraphPanel(wx.Panel):
         grid0Pen = wx.Pen(foreColor, 2, wx.SOLID)
         noFillBrush = wx.Brush("BLACK", wx.TRANSPARENT)
         dyText = fontSize + 5
+        pxSize = (fontSize * 4) / 3.0
         clientWid, clientHt = self.GetSize()
 
         # exit if any traces outside of graph: they may have not caught up yet
@@ -192,6 +199,10 @@ class GraphPanel(wx.Panel):
         # draw the grid, axes, and legend if they're new or updated
         if not self._haveDrawnGrid:
             LogGUIEvent("OnPaint: redraw grid")
+            if self.web:
+                grid = []
+                grid.append(("c", "grid"))
+
             # (GraphicsContext doesn't like AutoBufferedPaintDC, so we use:)
             if False:
 ##            if slowDisplay or self.IsDoubleBuffered():
@@ -207,7 +218,6 @@ class GraphPanel(wx.Panel):
                             self.rtMarginPix
             self.graphHt = graphHt = clientHt  - 2*self.marginPix - 20 - \
                             self.botMarginPix
-            ##print ("OnPaint"
 
             # scale horz axis of graph to fit window
             hWid = h1 - h0
@@ -216,6 +226,7 @@ class GraphPanel(wx.Panel):
             wh0, hh0 = dc1.GetTextExtent(str(h0))
             wh1, hh1 = dc1.GetTextExtent(str(h1))
             gridHSize = max(self.gridHSize, 2*max(wh0, wh1)+10)
+            print (h0, hh0, h1, hh1, gridHSize)
             if hWid == 0:
                 isLogF = False
                 dh = 0.     # h distance (in hUnits) between divisions
@@ -314,6 +325,8 @@ class GraphPanel(wx.Panel):
             dc.Clear()
             dc.SetFont(wx.Font(fontSize, wx.SWISS, wx.NORMAL,
                                 p.theme.textWeight))
+            if self.web:
+                grid.append(("f", "%dpt Arial" % fontSize))
 
             # ------ GRID ------
 
@@ -324,7 +337,8 @@ class GraphPanel(wx.Panel):
             for name, tr in sorted(self.traces.iteritems(), \
                                 key=(lambda (k,v): v.name.upper())):
                 if tr.displayed:
-#                    print("p.theme.vColors:", len(p.theme.vColors), "tr.iColor=", tr.iColor)
+                    # print("p.theme.vColors:", len(p.theme.vColors), \
+                    #    "tr.iColor=", tr.iColor)
                     vColor = vColors[tr.iColor]
                     ##dc.SetPen(wx.Pen(vColor, 1, wx.SOLID))
                     dc.SetPen(wx.Pen(vColor, 5, wx.SOLID))
@@ -336,6 +350,13 @@ class GraphPanel(wx.Panel):
                     (w, h) = dc.GetTextExtent(text)
                     dc.DrawText(text, x + 23, y - 6)
                     y += h + 4
+                    if self.web:
+                        grid.append(self.setColor(vColor))
+                        grid.append(("w", 5))
+                        grid.append(("d", int(x), int(y), int(x + 20), int(y)))
+                        grid.append(("w", 1))
+                        grid.append(("t", text, int(x + 23), int(y + pxSize/4)))
+                        #y += pxSize + 4
 
             # draw graph axis labels
             vaColor = None
@@ -344,16 +365,24 @@ class GraphPanel(wx.Panel):
             vbColor = None
             if trB:
                 vbColor = vColors[trB.iColor]
+            if self.web:
+                grid.append(("a", "center"))
             if vaUnits:
                 dc.SetTextForeground(vaColor)
                 (w, h) = dc.GetTextExtent(vaLabel)
                 dc.DrawText(vaLabel, x0 - w/2, y0 - 2*h)
-#                dc.DrawText(vaUnits, x0 - w - 2, y0 - 2*h)
+                if self.web:
+                    grid.append(self.setColor(vaColor))
+                    grid.append(("f", "%dpt Arial" % fontSize))
+                    grid.append(("t", vaLabel, int(x0), int(y0 - pxSize)))
             if vbUnits:
                 dc.SetTextForeground(vbColor)
                 (w, h) = dc.GetTextExtent(vbLabel)
                 dc.DrawText(vbLabel, x1 - w/2 , y0 - 2*h)
-#                dc.DrawText(vbUnits, x1 - 2, y0 - 2*h)
+                if self.web:
+                    grid.append(self.setColor(vbColor))
+                    grid.append(("f", "%dpt Arial" % fontSize))
+                    grid.append(("t", vbLabel, int(x1), int(y0 - pxSize)))
             dc.SetTextForeground(hColor)
             hUnit = self.hUnit
             if isLogF:
@@ -375,18 +404,35 @@ class GraphPanel(wx.Panel):
                     (w, h) = dc.GetTextExtent(vaText)
                     dc.SetTextForeground(vaColor)
                     dc.DrawText(vaText, x0 - w - 3, y - h/2)
+                    if self.web:
+                        grid.append(self.setColor(vaColor))
+                        grid.append(("f", "%dpt Arial" % fontSize))
+                        grid.append(("a", "right"))
+                        grid.append(("t", vaText, int(x0 - 3), \
+                                     int(y + pxSize/4)))
                 if vbUnits:
                     vb = vbBase + vDiv * dvb
                     vbText = si(vb, 3)
                     (w, h) = dc.GetTextExtent(vbText)
                     dc.SetTextForeground(vbColor)
                     dc.DrawText(vbText, x1 + 3, y - h/2)
+                    if self.web:
+                        grid.append(self.setColor(vbColor))
+                        grid.append(("a", "left"))
+                        grid.append(("t", vbText, int(x1 + 3), \
+                                     int(y + pxSize/4)))
 
                 dc.SetPen(gridPen)
                 dc.DrawLine(x0, y, x1, y)
 
+                if self.web:
+                    grid.append(("d", int(x0), int(y), int(x1), int(y)))
+
             # draw grid h lines
             dc.SetTextForeground(hColor)
+            if self.web:
+                grid.append(self.setColor(hColor))
+                grid.append(("a", "center"))
             if isLogF:
                 ##print ("h0=", h0, "h1=", h1
                 hName = si(h0 * MHz)
@@ -412,12 +458,16 @@ class GraphPanel(wx.Panel):
                         dc.DrawText(hName, x - tw/2, y1 + 6)
                     dc.SetPen(gridPen)
                     dc.DrawLine(x, y0, x, y1)
+                    if self.web:
+                        grid.append(("d", int(x), int(y0), int(x), int(y1)))
                     hDiv += 1
                     f += df
                     lf = log10(f)
                 hName = si(h1 * MHz)
                 (tw, th) = dc.GetTextExtent(hName)
                 dc.DrawText(hName, x1 - tw/2, y1 + 6)
+                if self.web:
+                    grid.append(("t", hName, int(x1), int(y1 + 6 + pxSize)))
             else:
                 xDiv0 = x0 + hFrac * dx
                 for hDiv in range(0, nXDiv+1):
@@ -433,8 +483,13 @@ class GraphPanel(wx.Panel):
                             hName = hName[:-2]
                         (w, h) = dc.GetTextExtent(hName)
                         dc.DrawText(hName, x - w/2, y1 + 6)
+                        if self.web:
+                            grid.append(("t", hName, int(x), \
+                                         int(y1 + 3 + pxSize)))
                     dc.SetPen(gridPen)
                     dc.DrawLine(x, y0, x, y1)
+                    if self.web:
+                        grid.append(("d", int(x), int(y0), int(x), int(y1)))
 
             # draw border
             dc.SetPen(grid0Pen)
@@ -448,6 +503,12 @@ class GraphPanel(wx.Panel):
             dc.SetFont(wx.Font(fontSize*1.2, wx.SWISS, wx.NORMAL, wx.NORMAL))
             (w, h) = dc.GetTextExtent(self.title)
             dc.DrawText(self.title, (x1 + x0 - w)/2, y0 - 10 - h)
+            if self.web:
+                grid.append(self.setColor(hColor))
+                grid.append(("f", "%dpt Arial" % int(fontSize*1.2)))
+                grid.append(("a", "center"))
+                grid.append(("t", self.title, int((x1 + x0)/2), \
+                             int(y0 - 10)))
 
             # draw right info panel
             xinfo = x1 + 50
@@ -456,25 +517,50 @@ class GraphPanel(wx.Panel):
             (w, h) = dc.GetTextExtent(modeName)
             dc.DrawText(modeName, clientWid - 10 - w, 5)
             dc.SetFont(wx.Font(fontSize, wx.SWISS, wx.NORMAL, wx.NORMAL))
+            if self.web:
+                grid.append(("a", "right"))
+                grid.append(("f", "%dpt Arial" % int(fontSize)))
+                grid.append(("t", modeName, int(clientWid - 10), int(pxSize)))
             if p.calLevel <= 2 and p.mode > MSA.MODE_SATG:
                 calLevelName = ("None", "Base", "Band")[msa.calLevel]
-                dc.SetTextForeground((red, blue, hColor)[p.calLevel])
-                dc.DrawText("Cal=" + calLevelName, xinfo, yinfo + 0*dyText)
+                color = (red, blue, hColor)[p.calLevel]
+                dc.SetTextForeground(color)
+                txt = "Cal=" + calLevelName
+                dc.DrawText(txt, xinfo, yinfo + 0*dyText)
+                if self.web:
+                    grid.append(self.setColor(color))
+                    grid.append(("a", "left"))
+                    grid.append(("t", txt, int(xinfo), int(yinfo + 0*pxSize)))
             dc.SetTextForeground(hColor)
             ##dc.DrawText("RBW=%sHz" % si(p.rbw * kHz), xinfo, yinfo + 1*dyText)
             ##dc.DrawText("RBW=%sHz" % (p.rbw * kHz), xinfo, yinfo + 1*dyText)
             dc.DrawText("RBW=%.1fkHz" % p.rbw, xinfo, yinfo + 1*dyText)
             dc.DrawText("Wait=%dms" % int(p.wait), xinfo, yinfo + 2*dyText)
             dc.DrawText("Steps=%d" % int(p.nSteps), xinfo, yinfo + 3*dyText)
+            if self.web:
+                    grid.append(self.setColor(hColor))
+                    grid.append(("t", "RBW=%.1fkHz" % p.rbw, \
+                                 int(xinfo), int(yinfo + 1*pxSize)))
+                    grid.append(("t", "Wait=%dms" % int(p.wait), \
+                                 int(xinfo), int(yinfo + 2*pxSize)))
+                    grid.append(("t", "Steps=%d" % int(p.nSteps), \
+                                 int(xinfo), int(yinfo + 3*pxSize)))
             y = 4
             if not p.isLogF:
                 df = (p.fStop - p.fStart) / p.nSteps
                 dc.DrawText("%sHz/Step" % si(df * MHz), xinfo, yinfo+y*dyText)
+                if self.web:
+                    grid.append(("t", "%sHz/Step" % si(df * MHz), \
+                                 int(xinfo), int(yinfo+y*pxSize)))
                 y += 1
             if p.mode >= MSA.MODE_VNATran and p.planeExt[0] > 0:
                 for i, planeExt in enumerate(p.planeExt):
                     dc.DrawText("Exten%dG=%ss" % (i, si(planeExt * ns)), xinfo,
                             yinfo + y*dyText)
+                    if self.web:
+                        grid.append(("t", 
+                                     "Exten%dG=%ss" % (i, si(planeExt * ns)), 
+                                     int(xinfo), int(yinfo + y*pxSize)))
                     y += 1
             if p.mode == MSA.MODE_VNARefl:
                 fixName = "Bridge"
@@ -483,11 +569,18 @@ class GraphPanel(wx.Panel):
                 elif p.isShuntFix:
                     fixName = "Shunt"
                 dc.DrawText("Fixture=%s" % fixName, xinfo, yinfo + y*dyText)
+                if self.web:
+                    grid.append(("t", "Fixture=%s" % fixName, 
+                                 int(xinfo), int(yinfo + y*pxSize)))
+                                    
                 y += 1
 ##            if p.cftest == True:
 ##                dc.DrawText("CFfilter test is ON", xinfo, yinfo + y*dyText)
 ##                y += 1
             dc.DrawText("Vers %s" % GetVersion(), xinfo, yinfo + y*dyText)
+            if self.web:
+                grid.append(("t", "Vers %s" % GetVersion(), \
+                             int(xinfo), int(yinfo + y*pxSize)))
             y += 1
             
 
@@ -522,6 +615,12 @@ class GraphPanel(wx.Panel):
 
             ##dc.DestroyClippingRegion()
 
+            if self.web:
+                grid.append(("r", int(x0), int(y0), int(x1-x0), int(y1-y0)))
+                f = open("grid.txt", "w")
+                json.dump(grid,f,separators=(',', ': '));
+                f.close();
+
         else:
             # already have drawn grid, just retrieve parameters
             x0 = self.x0; y0 = self.y0
@@ -550,6 +649,10 @@ class GraphPanel(wx.Panel):
             h1 = log10(h1)
 
         # ------ TRACES ------
+
+        if self.web:
+            graph = []
+            graph.append(("c", "graph"))
 
         # draw each trace in a different color
         for name, tr in sorted(self.traces.iteritems(), \
@@ -626,15 +729,25 @@ class GraphPanel(wx.Panel):
                     eraseWidth = 0
                 path = gc.CreatePath()
                 path.MoveToPoint(x[0], y[0])
+                if self.web:
+                    graph.append(("m", int(x[0]), int(y[0])))
                 for i in range(1, len(x)):
                     if tr.isMain and i > self.cursorStep and \
                                 i <= self.cursorStep+eraseWidth:
                         path.MoveToPoint(x[i], y[i])
                     else:
                         path.AddLineToPoint(x[i], y[i])
+                    if self.web:
+                        graph.append(("l", int(x[i]), int(y[i])))
                 color = vColors[tr.iColor]
                 gc.SetPen(wx.Pen(color, tr.dotSize, wx.SOLID))
                 gc.StrokePath(path)
+
+                if self.web:
+                    pass
+                    graph.append(("y","#%02x%02x%02x" % \
+                                  (color.Red(),color.Green(),color.Blue())))
+                    graph.append(("k"))
 
                 if self.graphWid/fullLen > 20:
                     # draw larger dots at data points if X low-res
@@ -656,7 +769,7 @@ class GraphPanel(wx.Panel):
                     # remove main line segs at the cursor to form a moving gap
                     eraseWidth = int(10./(trdh*dx)) + 1
                 else:
-                    erasewidth = 0
+                    eraseWidth = 0
                 lines = concatenate((lines[:self.cursorStep],
                                          lines[self.cursorStep+eraseWidth:]))
 ##                if isPhase:
@@ -678,6 +791,11 @@ class GraphPanel(wx.Panel):
                                         axis=1).tolist()
                     dc.SetPen(wx.Pen(color, self.dotSize, wx.SOLID))
                     dc.DrawLineList(dots, None)
+
+        if self.web:
+            f = open("graph.txt", "w")
+            json.dump(graph,f,separators=(',', ': '));
+            f.close();
 
         # ------ MARKERS ------
 
