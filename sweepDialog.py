@@ -7,7 +7,8 @@ from util import StartStopToCentSpan, CentSpanToStartStop
 from stepAtten import SetStepAttenuator
 from theme import DarkTheme, LightTheme
 
-SetModuleVersion("sweepDialog",("1.03","EON","03/21/2014"))
+SetModuleVersion("sweepDialog",("1.03","EON","03/22/2014"))
+# Update from ("sweepDialog",("1.02","EON.C","03/14/2014"))
 
 debug = False
 
@@ -28,7 +29,7 @@ class SweepDialog(wx.Dialog):
         c = wx.ALIGN_CENTER
 
         self.sizerH = sizerH = wx.BoxSizer(wx.HORIZONTAL)
-        sizerV1 = wx.BoxSizer(wx.VERTICAL)
+        self.sizerV1 = sizerV1 = wx.BoxSizer(wx.VERTICAL)
 
         # Mode selection # Commented out by JGH 3/8/14
 ##        sizerV1.Add(wx.StaticText(self, -1, "Data Mode"), 0)
@@ -54,25 +55,29 @@ class SweepDialog(wx.Dialog):
         sizerV1.Add(cm1, 0, wx.ALIGN_LEFT, 0)
 
         # Video Filters
-        sizerV1.Add(wx.StaticText(self, -1, "Video Filters"), 0)
+        sizerV1.Add(wx.StaticText(self, -1, "Video Filters"), 0, wx.TOP, 2)
         # samples = ["Wide", "Medium", "Narrow", "XNarrow"]
         samples = msa.vFilterNames
         self.videoFilt = cm2 = wx.ComboBox(self, -1, samples[2], (0, 0), (100, -1), samples)
-        cm2.SetSelection(p.vFilterSelIndex)
+        cm2.SetSelection(p.vFilterSelindex)
         self.Bind(wx.EVT_COMBOBOX, self.calculateWait, cm2)
         sizerV1.Add(cm2, 0, wx.ALIGN_LEFT, 0)
-        sizerV1.Add(wx.StaticText(self, -1, "Wait (ms)"), 0)
-        sizerV1H2 = wx.BoxSizer(wx.HORIZONTAL)
-        self.waitTB = tc = wx.TextCtrl(self, -1, str(p.wait), size=(50, -1))
-        self.Bind(wx.EVT_TEXT, self.setWaitTB, tc)
+
+        self.sizerV1V1 = sizerV1V1 = wx.BoxSizer(wx.VERTICAL)
+        sizerV1V1.Add(wx.StaticText(self, -1, "Smith Norm"), 0, wx.TOP, 2)
+        sizerV1H1 = wx.BoxSizer(wx.HORIZONTAL)
+        p.graphR = p.get("graphR", 50)
+        self.graphRBox = tc = wx.TextCtrl(self, -1, "%2.0f" % p.graphR, \
+                                          size=(50, -1))
         tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
-        sizerV1H2.Add(tc, 0, c)
-        self.autoWaitCB = chk4 = wx.CheckBox(self, -1, "Auto Wait")
-        chk4.Bind(wx.EVT_CHECKBOX, self.configAutoWait)
-        sizerV1H2.Add(chk4, 0, c|wx.LEFT, 10)
-        sizerV1.Add(sizerV1H2, 0, wx.ALIGN_LEFT, 0)
+        sizerV1H1.Add(tc, 0, wx.ALIGN_LEFT)
+        sizerV1H1.Add(wx.StaticText(self, -1, "  ohms"), 0, c|wx.LEFT, 2)
+        sizerV1V1.Add(sizerV1H1, 0, wx.LEFT)
+        sizerV1.Add(self.sizerV1V1, 0, wx.LEFT)
+        sizerV1.Show(sizerV1V1, False)
+
         sizerH.Add(sizerV1, 0, wx.ALL, 10)
-        
+
         sizerV2 = wx.BoxSizer(wx.VERTICAL)
         if 0:
             # these aren't implemented yet
@@ -89,7 +94,7 @@ class SweepDialog(wx.Dialog):
             sizerV2.Add(chk, 0, wx.BOTTOM, 10)
 
         self.atten5CB = cb = wx.CheckBox(self, -1, "Attenuate 5dB")
-        sizerV2.Add(cb, 0, wx.BOTTOM, 10)
+        sizerV2.Add(cb, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.BOTTOM, 10)
 
         sizerV2.Add(wx.StaticText(self, -1, "Step Attenuator"), 0, c|wx.TOP)
         sizerH2 = wx.BoxSizer(wx.HORIZONTAL)
@@ -109,7 +114,7 @@ class SweepDialog(wx.Dialog):
         sizerV3 = wx.BoxSizer(wx.VERTICAL)
         freqBoxTitle = wx.StaticBox(self, -1, "")
         freqBox = wx.StaticBoxSizer(freqBoxTitle, wx.HORIZONTAL)
-        freqSizer = wx.GridBagSizer(0, 0)
+        freqSizer = wx.GridBagSizer(2, 2)
         self.centSpanRB = rb = wx.RadioButton(self, -1, "", style= wx.RB_GROUP)
         self.skip = False
         self.Bind(wx.EVT_RADIOBUTTON, self.AdjFreqTextBoxes, rb)
@@ -144,7 +149,7 @@ class SweepDialog(wx.Dialog):
         tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
         freqSizer.Add(wx.StaticText(self, -1, "MHz"), (1, 7), (1, 1), 0, cl, 2)
         freqBox.Add(freqSizer, 0, wx.ALL, 2)
-        sizerV3.Add(freqBox, 0, wx.EXPAND)
+        sizerV3.Add(freqBox, 0, 0)
 
         # other sweep parameters
         sizerH3 = wx.BoxSizer(wx.HORIZONTAL)
@@ -159,10 +164,22 @@ class SweepDialog(wx.Dialog):
         sizerH3V1H1.Add(chk3, 0, c|wx.LEFT, 10)
         sizerH3V1.Add(sizerH3V1H1, 0, 0)
 
-        sizerH3V1.Add(wx.StaticText(self, -1, "Graph Appear"), 0)
+        sizerH3V1.Add(wx.StaticText(self, -1, "Wait (ms)"), 0, wx.TOP, 2)
+        sizerH3V1H2 = wx.BoxSizer(wx.HORIZONTAL)
+        self.waitTB = tc = wx.TextCtrl(self, -1, str(p.wait), size=(50, -1))
+        self.Bind(wx.EVT_TEXT, self.setWaitTB, tc)
+        tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
+        sizerH3V1H2.Add(tc, 0, c)
+        self.autoWaitCB = chk4 = wx.CheckBox(self, -1, "Auto Wait")
+        chk4.Bind(wx.EVT_CHECKBOX, self.configAutoWait)
+        sizerH3V1H2.Add(chk4, 0, c|wx.LEFT, 10)
+        sizerH3V1.Add(sizerH3V1H2, 0, wx.ALIGN_LEFT, 0)
+
+        sizerH3V1.Add(wx.StaticText(self, -1, "Graph Appear"), 0, wx.TOP, 2)
         samples = ["Dark", "Light"]
         self.graphAppear = cm3 = wx.ComboBox(self, -1, samples[1], (0, 0), (100, -1), samples)
         sizerH3V1.Add(cm3, 0, wx.ALIGN_LEFT, 0)
+
         sizerH3.Add(sizerH3V1, 0, 0)
 
         sizerH3V2 = wx.BoxSizer(wx.VERTICAL) # JGH 11/25/2013
@@ -184,12 +201,27 @@ class SweepDialog(wx.Dialog):
         sweepH2Sizer.Add(rb, 0, wx.RIGHT, 10)
         self.alternateRB = rb = wx.RadioButton(self, -1, "Alternate")
         sweepH2Sizer.Add(rb, 0, 0)
-        sweepSizer.Add(sweepH2Sizer, 0, 0)
+        sweepSizer.Add(sweepH2Sizer, 0, wx.TOP, 3)
         sizerH3V2.Add(sweepSizer, 0, wx.LEFT|wx.TOP, 10) # JGH 11/25/2013
         self.traceBlankCB = chk2 = wx.CheckBox(self, -1, "Trace Blanking")
         self.Bind(wx.EVT_CHECKBOX, self.TraceBlanking, chk2)
-        sizerH3V2.Add(chk2, 0, wx.ALIGN_CENTER, 0)
-        
+        sizerH3V2.Add(chk2, 0, wx.ALIGN_CENTER|wx.TOP, 5)
+
+        fwdrevBoxTitle = wx.StaticBox(self, -1, "DUT Fwd/Rev")
+        self.fwdrevSizer = fwdrevSizer = wx.StaticBoxSizer(fwdrevBoxTitle, wx.VERTICAL)
+        # DUT Forward/Reverse
+        fwdrevH1Sizer = wx.BoxSizer(wx.HORIZONTAL)
+        rb = wx.RadioButton(self, -1, "Forward", style= wx.RB_GROUP)
+        self.forwardFR = rb
+        self.Bind(wx.EVT_RADIOBUTTON, self.SetDUTfwdrev, rb)
+        fwdrevH1Sizer.Add(rb, 0, wx.RIGHT, 10)
+        self.reverseFR = rb = wx.RadioButton(self, -1, "Reverse")
+        self.Bind(wx.EVT_RADIOBUTTON, self.SetDUTfwdrev, rb)
+        fwdrevH1Sizer.Add(rb, 4, 0)
+        fwdrevSizer.Add(fwdrevH1Sizer, 4, 0)
+        sizerH3V2.Add(fwdrevSizer, 0, wx.LEFT|wx.TOP|wx.EXPAND, 5)
+        sizerH3V2.Show(fwdrevSizer, False, True)
+
         sizerH3.Add(sizerH3V2, 0, 0) # JGH 11/25/2013
         sizerV3.Add(sizerH3, 0, 0)
         self.sizerH3V1 = sizerH3V1
@@ -247,13 +279,13 @@ class SweepDialog(wx.Dialog):
 
 ##        self.dataModeCM.SetValue(p.get("dataMode", "0(Normal Operation)"))
 
-        self.RBWPath.SetValue(self.finFiltSamples[p.indexRBWSel])
-        # JGH: Get RBW switch bits (Correspond directly to msa.indexRBWSel)
-        self.switchRBW = p.indexRBWSel
+        self.RBWPath.SetValue(self.finFiltSamples[p.RBWSelindex])
+        # JGH: Get RBW switch bits (Correspond directly to msa.RBWSelindex)
+        self.switchRBW = p.RBWSelindex
 
-        # JGH: Get Video switch bits  (= vFilterSelIndex)
-        self.vFilterSelName = p.vFilterSelName = self.videoFilt.GetValue()
-        self.vFilterSelIndex = p.vFilterSelIndex = msa.vFilterNames.index(p.vFilterSelName)
+        # JGH: Get Video switch bits  (= vFilterSelindex)
+        self.vFilterSelname = p.vFilterSelname = self.videoFilt.GetValue()
+        self.vFilterSelindex = p.vFilterSelindex = msa.vFilterNames.index(p.vFilterSelname)
 
         self.graphAppear.SetValue(p.get("graphAppear", "Light"))
 
@@ -276,6 +308,8 @@ class SweepDialog(wx.Dialog):
             # delete previous mode-dependent controls, if any
             sizerVM = self.sizerVM
             sizerVM.Clear(deleteWindows=True)
+            self.sizerH3V2.Show(self.fwdrevSizer, False, True)
+            self.sizerV1.Show(self.sizerV1V1, False, True)
 
             # create new mode-dependent controls
             c = wx.ALIGN_CENTER
@@ -340,31 +374,11 @@ class SweepDialog(wx.Dialog):
                 sizerH.Add(wx.StaticText(self, -1, "ns"), 0, c|wx.LEFT, 2)
                 sizerVM.Add(sizerH, 0, ch|wx.ALL, 2)
 
-                # For reflection only, Graph R()
-                if newMode == MSA.MODE_VNARefl:
-                    self.sizerH3V1.Add(wx.StaticText(self, -1, "Smith Norm"), 0, wx.TOP, 7)
-                    sizerH3V1H3 = wx.BoxSizer(wx.HORIZONTAL)
-                    p.graphR = p.get("graphR", 50)
-                    self.graphRBox = tc = wx.TextCtrl(self, -1, str(p.graphR), size=(50, -1))
-                    tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
-                    tc.Enable(True)
-                    sizerH3V1H3.Add(tc, 0, wx.ALIGN_LEFT)
-                    sizerH3V1H3.Add(wx.StaticText(self, -1, "  ohms"), 0, c|wx.LEFT, 2)
-                    self.sizerH3V1.Add(sizerH3V1H3, 0, wx.ALIGN_LEFT)
+                self.sizerH3V2.Show(self.fwdrevSizer, True, True)
 
-                # DUT Forward/Reverse
-                fwdrevBoxTitle = wx.StaticBox(self, -1, "DUT Fwd/Rev")
-                fwdrevSizer = wx.StaticBoxSizer(fwdrevBoxTitle, wx.VERTICAL)
-                fwdrevH1Sizer = wx.BoxSizer(wx.HORIZONTAL)
-                rb = wx.RadioButton(self, -1, "Forward", style= wx.RB_GROUP)
-                self.forwardFR = rb
-                self.Bind(wx.EVT_RADIOBUTTON, self.SetDUTfwdrev, rb)
-                fwdrevH1Sizer.Add(rb, 0, wx.RIGHT, 10)
-                self.reverseFR = rb = wx.RadioButton(self, -1, "Reverse")
-                self.Bind(wx.EVT_RADIOBUTTON, self.SetDUTfwdrev, rb)
-                fwdrevH1Sizer.Add(rb, 4, 0)
-                fwdrevSizer.Add(fwdrevH1Sizer, 4, 0)
-                self.sizerH3V2.Add(fwdrevSizer, 0, wx.LEFT|wx.TOP|wx.EXPAND, 12)
+                # For reflection only, Graph R()
+                if msa.mode == MSA.MODE_VNARefl:
+                    self.sizerV1.Show(self.sizerV1V1, True)
 
             self.mode = newMode
             sizerVM.Layout()
@@ -406,7 +420,9 @@ class SweepDialog(wx.Dialog):
 
     def setStepsTB(self, event=None):
         p = self.frame.prefs
-        p.nSteps = int(self.stepsTB.GetValue())
+        #print("sweepDialog>410< Steps box has; ", self.stepsTB.GetValue())
+        if p.cftest == False:
+            p.nSteps = int(self.stepsTB.GetValue())
 
     #--------------------------------------------------------------------------
 
@@ -530,20 +546,20 @@ class SweepDialog(wx.Dialog):
         i = self.RBWPath.GetSelection()
         # JGH added in case the SweepDialog is opened and closed with no action
         if i >= 0:
-            msa.indexRBWSel = p.indexRBWSel = i
+            msa.RBWSelindex = p.RBWSelindex = i
         # JGH end
-        (msa.finalfreq, msa.finalbw) = p.RBWFilters[p.indexRBWSel]
+        (msa.finalfreq, msa.finalbw) = p.RBWFilters[p.RBWSelindex]
         p.rbw = msa.finalbw # JGH added
-        p.switchRBW = p.indexRBWSel
+        p.switchRBW = p.RBWSelindex
 
         self.calculateWait
 
         i = self.videoFilt.GetSelection()
         if i>= 0:
-            msa.vFilterSelIndex = p.vFilterSelIndex = i
+            msa.vFilterSelindex = p.vFilterSelindex = i
 
-        p.vFilterSelIndex = self.vFilterSelIndex
-        p.vFilterSelName = self.vFilterSelName
+        p.vFilterSelindex = self.vFilterSelindex
+        p.vFilterSelname = self.vFilterSelname
 
         p.graphAppear = self.graphAppear.GetValue()
         p.theme = (DarkTheme, LightTheme)[p.graphAppear == "Light"]
@@ -573,7 +589,7 @@ class SweepDialog(wx.Dialog):
         if self.autoWaitCB.GetValue() == True:   # JGH 11/27/13
             self.calculateWait()
             self.waitTB.SetValue(str(p.wait))
-            if debug:
+            if 0 or debug:
                 print ("waitBox: ", self.waitBox.GetValue())
         else:
             p.wait = int(self.waitTB.GetValue())
