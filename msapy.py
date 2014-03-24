@@ -83,7 +83,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
-SetModuleVersion("msapy",("1.10","EON","03/21/2014"))
+SetModuleVersion("msapy",("1.10","JGH.d","03/20/2014"))
 SetVersion(version)
 
 msa = None
@@ -373,8 +373,8 @@ class MSASpectrumFrame(wx.Frame):
         p.get("atten5", False)
         p.get("stepAttenDB", 0)
         p.get("switchPulse", 0) # JGH added Oct23
-        p.get("cftest", False) ; p.cftest = False
         p.get("syntData", False)
+        p.get("rbwP4", False) # RBW may use P4 (new, True) or P1 (classic, False)
 
         # initialize spectrum graph
         p.get("fStart", -1.5)
@@ -422,7 +422,7 @@ class MSASpectrumFrame(wx.Frame):
         self.screenWidth, self.screenHeight = wx.Display().GetGeometry()[2:4]
 
         # Initialize cavity filter test status # JGH 1/26/14
-        self.cftest = False
+##        self.cftest = False
 
         # restore markers from preferences
         for attr, value in p.__dict__.items():
@@ -461,7 +461,8 @@ class MSASpectrumFrame(wx.Frame):
         msa.baseCal = None
         # Start EON Jan 28, 2014
 
-        # make one scan to generate a graph
+        # MAKE ONE SCAN TO CONFIGURE GRAPH
+        msa.cftest = False
         self.ScanPrecheck(True)
         if (p.get("dds3Track",False) or p.get("dds1Sweep",False)):
             self.ddsTests
@@ -581,10 +582,11 @@ class MSASpectrumFrame(wx.Frame):
         self.spectrum = None
         self.needRestart = False
         if msa.syndut: # JGH 2/8/14 syndutHook5
-            if debug:
-                print ("GETTING SYNTHETIC DATA")
+            if 0 or debug:
+                print ("msapy>587< GETTING SYNTHETIC DATA")
             msa.syndut.GenSynthInput()
         p = self.prefs
+
         fStart = p.fStart
         fStop = p.fStop
         title = time.ctime()
@@ -614,7 +616,7 @@ class MSASpectrumFrame(wx.Frame):
         if needsRefresh:
             self.RefreshAllParms()
 
-        # tell MSA hardware backend to start a scan
+        # tell MSA hardware backend to start a scan (msa.py module)
         if scan:
             msa.ConfigForScan(self, p, haltAtEnd)
 
@@ -1129,8 +1131,8 @@ class MSASpectrumFrame(wx.Frame):
     def RefreshAllParms(self):
         p = self.prefs
         specP = self.specP
-        if debug:
-            print (">>>15359<<< RefreshAllParms", specP._isReady, self.refreshing)
+        if 0 or debug:
+            print ("msapy>1135< RefreshAllParms", specP._isReady, self.refreshing)
 
 ##        # checkmark the current marker menu item in the Sweep menu
 ##        items = self.sweepMenu.Markers.GetSubMenu()
@@ -1556,7 +1558,7 @@ class MSASpectrumFrame(wx.Frame):
             print ("10,665 Reading path calibration")
         self.StopScanAndWait()
         p = self.prefs
-        directory, fileName = CalFileName(p.indexRBWSel+1)
+        directory, fileName = CalFileName(p.RBWSelindex+1)
         try:
             f = open(os.path.join(directory, fileName), "Ur")
             msa.magTableADC, msa.magTableDBm, msa.magTablePhase = \
@@ -1665,7 +1667,7 @@ class MSASpectrumFrame(wx.Frame):
     #--------------------------------------------------------------------------
     # Set the main operating mode.
 
-    def SetMode_SA(self, event):
+    def SetMode_SA(self, event=None):
         self.SetMode(MSA.MODE_SA)
 
     def SetMode_SATG(self, event):
@@ -1773,7 +1775,7 @@ class MSASpectrumFrame(wx.Frame):
 
     def logPshow(self, event):
         p = self.prefs
-        print("logSplit on show: ", p.logSplit)
+##        print("logSplit on show: ", p.logSplit)
         self.logSplitter.SetSashPosition(p.logSplit)
         self.logP.Show()
         p.logP = 0

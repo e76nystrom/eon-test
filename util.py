@@ -5,7 +5,7 @@ from math import cos, floor, sin, sqrt, tan
 from numpy import angle, exp, Inf, isnan, log10, mean, mod
 from numpy import nan_to_num, pi, select, seterr, std
 
-SetModuleVersion("util",("1.02","EON","03/11/2014"))
+SetModuleVersion("util",("1.03","JGH","03/11/2014"))
 
 # Set to truncate S11 to the unity circle to ignore error due to S21
 # measurement losses during calibrating
@@ -203,7 +203,7 @@ def CentSpanToStartStop(fCent, fSpan, isLogF):
 
 def StdScale(bot, top, size, divSize):
     wid = top - bot
-    dsExp, dsMantNo = divmod(log10(wid * divSize / size), 1)
+    dsExp, dsMantNo = divmod(log10(wid * divSize / float(size)), 1)
     if isnan(dsMantNo):
         print ("StdScale dsMantNo=", dsMantNo)
         return 1, 0, 0, 0

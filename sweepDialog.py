@@ -7,8 +7,7 @@ from util import StartStopToCentSpan, CentSpanToStartStop
 from stepAtten import SetStepAttenuator
 from theme import DarkTheme, LightTheme
 
-SetModuleVersion("sweepDialog",("1.03","EON","03/22/2014"))
-# Update from ("sweepDialog",("1.02","EON.C","03/14/2014"))
+SetModuleVersion("sweepDialog",("1.04","JGH","03/14/2014"))
 
 debug = False
 
@@ -54,14 +53,10 @@ class SweepDialog(wx.Dialog):
                                          (160, -1), samples)
         sizerV1.Add(cm1, 0, wx.ALIGN_LEFT, 0)
 
-        # Video Filters
-        sizerV1.Add(wx.StaticText(self, -1, "Video Filters"), 0, wx.TOP, 2)
-        # samples = ["Wide", "Medium", "Narrow", "XNarrow"]
-        samples = msa.vFilterNames
-        self.videoFilt = cm2 = wx.ComboBox(self, -1, samples[2], (0, 0), (100, -1), samples)
-        cm2.SetSelection(p.vFilterSelindex)
-        self.Bind(wx.EVT_COMBOBOX, self.calculateWait, cm2)
-        sizerV1.Add(cm2, 0, wx.ALIGN_LEFT, 0)
+        sizerV1.Add(wx.StaticText(self, -1, "Graph Appear"), 0, wx.TOP, 2)
+        samples = ["Dark", "Light"]
+        self.graphAppear = cm3 = wx.ComboBox(self, -1, samples[1], (0, 0), (100, -1), samples)
+        sizerV1.Add(cm3, 0, wx.ALIGN_LEFT, 0)
 
         self.sizerV1V1 = sizerV1V1 = wx.BoxSizer(wx.VERTICAL)
         sizerV1V1.Add(wx.StaticText(self, -1, "Smith Norm"), 0, wx.TOP, 2)
@@ -73,8 +68,8 @@ class SweepDialog(wx.Dialog):
         sizerV1H1.Add(tc, 0, wx.ALIGN_LEFT)
         sizerV1H1.Add(wx.StaticText(self, -1, "  ohms"), 0, c|wx.LEFT, 2)
         sizerV1V1.Add(sizerV1H1, 0, wx.LEFT)
-        sizerV1.Add(self.sizerV1V1, 0, wx.LEFT)
-        sizerV1.Show(sizerV1V1, False)
+        sizerV1.Add(sizerV1V1, 0, wx.LEFT)
+#        sizerV1.Show(sizerV1V1, False, True)
 
         sizerH.Add(sizerV1, 0, wx.ALL, 10)
 
@@ -175,10 +170,14 @@ class SweepDialog(wx.Dialog):
         sizerH3V1H2.Add(chk4, 0, c|wx.LEFT, 10)
         sizerH3V1.Add(sizerH3V1H2, 0, wx.ALIGN_LEFT, 0)
 
-        sizerH3V1.Add(wx.StaticText(self, -1, "Graph Appear"), 0, wx.TOP, 2)
-        samples = ["Dark", "Light"]
-        self.graphAppear = cm3 = wx.ComboBox(self, -1, samples[1], (0, 0), (100, -1), samples)
-        sizerH3V1.Add(cm3, 0, wx.ALIGN_LEFT, 0)
+        # Video Filters
+        sizerH3V1.Add(wx.StaticText(self, -1, "Video Filters"), 0, wx.TOP, 2)
+        # samples = ["Wide", "Medium", "Narrow", "XNarrow"]
+        samples = msa.vFilterNames
+        self.videoFilt = cm2 = wx.ComboBox(self, -1, samples[2], (0, 0), (100, -1), samples)
+        cm2.SetSelection(p.vFilterSelindex)
+        self.Bind(wx.EVT_COMBOBOX, self.calculateWait, cm2)
+        sizerH3V1.Add(cm2, 0, wx.ALIGN_LEFT, 0)
 
         sizerH3.Add(sizerH3V1, 0, 0)
 
@@ -377,8 +376,9 @@ class SweepDialog(wx.Dialog):
                 self.sizerH3V2.Show(self.fwdrevSizer, True, True)
 
                 # For reflection only, Graph R()
-                if msa.mode == MSA.MODE_VNARefl:
+                if newMode == MSA.MODE_VNARefl:
                     self.sizerV1.Show(self.sizerV1V1, True)
+                    self.sizerV1.Fit(self)
 
             self.mode = newMode
             sizerVM.Layout()
@@ -420,9 +420,7 @@ class SweepDialog(wx.Dialog):
 
     def setStepsTB(self, event=None):
         p = self.frame.prefs
-        #print("sweepDialog>410< Steps box has; ", self.stepsTB.GetValue())
-        if p.cftest == False:
-            p.nSteps = int(self.stepsTB.GetValue())
+        p.nSteps = int(self.stepsTB.GetValue())
 
     #--------------------------------------------------------------------------
 
@@ -589,7 +587,7 @@ class SweepDialog(wx.Dialog):
         if self.autoWaitCB.GetValue() == True:   # JGH 11/27/13
             self.calculateWait()
             self.waitTB.SetValue(str(p.wait))
-            if 0 or debug:
+            if debug:
                 print ("waitBox: ", self.waitBox.GetValue())
         else:
             p.wait = int(self.waitTB.GetValue())
