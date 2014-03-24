@@ -1558,7 +1558,7 @@ class MSASpectrumFrame(wx.Frame):
             print ("10,665 Reading path calibration")
         self.StopScanAndWait()
         p = self.prefs
-        directory, fileName = CalFileName(p.RBWSelindex+1)
+        directory, fileName = CalFileName(p.get("indexRBWSel", 0)+1)
         try:
             f = open(os.path.join(directory, fileName), "Ur")
             msa.magTableADC, msa.magTableDBm, msa.magTablePhase = \

@@ -9,7 +9,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.02","JGH.d","03/22/2014"))
+SetModuleVersion("msa",("1.02","JGH.e","03/24/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -76,7 +76,7 @@ class MSA:
         # TG offset frequency
         self._offset = 0
         # FWD/REV and TRANS/REFL
-        self.switchFR = p.get("switchFR", 0)
+        self.switchFR = p.get("switchFR", False)
         self.switchTR = p.get("switchTR", 0)
 ##        self.bitsFR = 16 * self.switchFR
 ##        self.bitsTR = 32 * self.switchTR
@@ -84,11 +84,11 @@ class MSA:
         self.spurcheck = 0
         # 1, 2 or 3, indicating bands 1G, 2G and 3G
         p.switchBand = p.get("switchBand", 1)
-        if p.switchBand == 0:
-##            self.bitsBand = 64 * 0 # Band 2
+        if p.switchBand == 2:
+##            self.bitsBand = 64 * 1 # Band 2
             self._GHzBand = 2
         else:
-##            self.bitsBand = 64 * 1 # Bands 1 and 3
+##            self.bitsBand = 64 * 0 # Bands 1 and 3
             self._GHzBand = 1 # (or 3)
         # Pulse switch
         self.switchPulse = p.get("switchPulse", 0)
@@ -218,8 +218,8 @@ class MSA:
         thisfreq = self._Equiv1GFreq(TrueFreq)  # get equivalent 1G frequency
 
         LO2freq = LO2.freq
-        offset = self._offset
         if self.mode != self.MODE_SA:
+            offset = self._offset
             if self._normrev == 0:
                 if self._GHzBand == 3:
                     # Mode 3G sets LO3 differently
@@ -334,12 +334,13 @@ class MSA:
             self.bitsBand = 64 * 1
         if self.rbwP4 == True:
             # Clear the frequency band bits (bit 6 of P4)
-            switchBits &= ~(1 << 6)
+            bitPos = 6 ; switchBits &= ~(1 << bitPos)
             switchBits = switchBits + self.bitsBand
         else:
             # Clear the frequency band bits (bits 2 and 3 of P4)
-            switchBits &= ~(1 << 2)
-            switchBits &= ~(1 << 3)
+            bitPos = 2 ; switchBits &= ~(1 << bitPos)
+            bitPos = 3 ; switchBits &= ~(1 << bitPos)
+            
             switchBits = switchBits + self.bitsBand
         cb.SetP(4, switchBits)
         cb.setIdle()
@@ -353,7 +354,7 @@ class MSA:
         p = self.frame.prefs
         self.vFilterSelindex = p.get("vFilterSelindex", 1)   # Values 0-3
         self.switchRBW = p.get("RBWSelindex", 0) # Values 0-3
-        self.switchFR = p.get("switchFR", 0) # Values 0,1
+        self.switchFR = p.get("switchFR", False) # Values 0,1
         self.switchTR = p.get("switchTR", 0) # Values 0,1
         self.switchBand = p.get("switchBand", 1) # 1: 0-1GHz, 2: 1-2GHz, 3: 2-3GHz
         self.switchPulse = 0 # JGH Oct23 Set this here and follow with a 1 sec delay
@@ -371,7 +372,8 @@ class MSA:
             self.bitsBand = 4 * self. switchBand # G0 Bits 2, 3 of P4
             switchBits = self.bitsVideo + self.bitsFR + \
                     self.bitsTR + self.bitsBand + self.bitsPulse
-##        print (">>>378<<< switchBits: ", switchBits)
+        if 0 or debug:
+            print ("msa>376< switchBits: ", bin(switchBits))
         return switchBits
 
     #--------------------------------------------------------------------------
@@ -462,6 +464,7 @@ class MSA:
         # JGH change end
 
         # 5. Command Filter Bank to Path one. Begin with all data lines low
+        # JGH: This may require some investigation for RBWinP4
         cb.OutPort(0)
         # latch "0" into all SLIM Control Board Buffers
         cb.OutControl(cb.SELTINITSTRBAUTO)
@@ -849,7 +852,7 @@ class MSA:
         self._offset     = parms.tgOffset
         self.invDeg      = parms.invDeg
         self._planeExt   = parms.planeExt
-        self._normrev    = parms.normRev
+        self._normrev    = parms.normRev # 0 for nrmal TG, 1 for TG in reverse
         self._sweepDir   = parms.sweepDir
         self._isLogF     = parms.isLogF
         self._contin     = parms.continuous

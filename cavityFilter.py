@@ -17,7 +17,7 @@ class CavityFilterTest(wx.Dialog):
         self.frame = frame
         p = self.prefs = frame.prefs
         framePos = frame.GetPosition()
-        pos = p.get("CavFiltTestsWinPos", (framePos.x + 100, framePos.y + 100))
+        pos = p.get("CavFiltWinPos", (framePos.x + 100, framePos.y + 100))
         wx.Dialog.__init__(self, frame, -1, "Cavity Filter Test", pos, \
                             wx.DefaultSize, wx.DEFAULT_DIALOG_STYLE)
         # Keep initial values

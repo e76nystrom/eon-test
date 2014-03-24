@@ -211,7 +211,6 @@ class SweepDialog(wx.Dialog):
         # DUT Forward/Reverse
         fwdrevH1Sizer = wx.BoxSizer(wx.HORIZONTAL)
         rb = wx.RadioButton(self, -1, "Forward", style= wx.RB_GROUP)
-        self.forwardFR = rb
         self.Bind(wx.EVT_RADIOBUTTON, self.SetDUTfwdrev, rb)
         fwdrevH1Sizer.Add(rb, 0, wx.RIGHT, 10)
         self.reverseFR = rb = wx.RadioButton(self, -1, "Reverse")
@@ -451,13 +450,7 @@ class SweepDialog(wx.Dialog):
         #--------------------------------------------------------------------------
 
     def SetDUTfwdrev(self, event):  # JGH added this method
-        sender = event.GetEventObject()
-        p = self.frame.prefs
-##        p.DUTfwdrev = sender.GetValue()
-        if sender.GetValue() == 0:  # Forward
-            p.switchFR = 0
-        else:
-            p.switchFR = 1  # Reverse
+        self.frame.prefs.switchFR = self.reverseFR.GetValue()
 
     #--------------------------------------------------------------------------
 
