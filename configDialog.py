@@ -5,8 +5,8 @@ import wx.grid
 from wx.lib.dialogs import ScrolledMessageDialog
 from util import gstr, mu
 
-SetModuleVersion("configDialog",("1.02","JGH.C","03/17/2014"))
-
+SetModuleVersion("configDialog",("1.03","JGH","03/20/2014"))
+# Updated from ("configDialog",("1.02","EON.C","03/16/2014"))
 #==============================================================================
 # The MSA/VNA Configuration Manager dialog box (also modal) # JGH
 
@@ -307,7 +307,13 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
             CBoptions = CBoptions[1:4]
             s = p.get("CBoptions",CBoptions[0])
         self.CBoptCM = cm = wx.ComboBox(self, -1, s, (1, 1), cwsz, choices=CBoptions, style=wx.CB_READONLY)
-        sizerG2B.Add(cm, (1, 1), flag=cv)
+        sizerG2B.Add(cm, (1,1), flag=cv)
+
+        self.rbwP4CB = chk2 = wx.CheckBox(self, -1, "Use RBW in P4")
+        self.rbwP4CB.SetValue(p.get("rbwP4", False))
+        print("rbwP4: ", self.rbwP4CB.GetValue())
+        sizerG2B.Add(chk2, (1,2), flag=cv)
+        
         sizerV2C.Add(sizerG2B, 0, wx.ALL, 5)
 
         sizerV2.Add(sizerV2C, 0, wx.ALL|wx.EXPAND, 4)
@@ -413,6 +419,8 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
             SetCb(cb)
         else:
             pass
+
+        p.rbwP4 = self.rbwP4CB.GetValue()   # JGH 3/18/14
 
         # JGH end of additions
 
