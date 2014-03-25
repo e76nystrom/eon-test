@@ -2,10 +2,14 @@
 # -*- coding: utf-8 -*-
 ###############################################################################
 #
-# msapy.py -- Modular Spectrum Analyzer Application Interface, in wxPython.
+#                       MODULAR SPECTRUM ANALYZER 
 #
-# The majority of this code is from spectrumanalyzer.bas, written by
-# Scotty Sprowls and modified by Sam Wetterlin.
+# The original Python software, written by Scott Forbes, was a complete rewrite
+# of the original Liberty Basic code developed by Scotty Sprowls (the designer
+# of the Spectrum Analyzer) and Sam Weterlin. Over a period of nine months,
+# comencing in May/June, 2013, Scott's code has been expanded and debugged by
+# Jim Hontoria, W1JGH and Eric Nystrom, W1EON in close consultation with Scotty.
+# Other contributors to the testing have been Will Dillon and  Earle Craig.
 #
 # Copyright (c) 2011, 2013 Scott Forbes
 #
@@ -15,6 +19,7 @@
 #
 # This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
 # WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+#
 ###############################################################################
 from __future__ import division
 
@@ -32,10 +37,6 @@ version = "2.7.P106 (2/3/14)"
 version = "P108JGH_F (2/24/14)"
 version = "P109GEORGE (2/25/14)"
 version = "1.01 (3/10/14)"
-# NOTE by JGH Dec 8, 2013: An attempt has been made to convert the Python 2.7 code to Python 3.
-# The conversion has been completed and affected print statements (require parentheses),
-# lambda functions (require being enclosed in parentheses) and unicode encoding using chr().
-# The print statements are now parenthesized. but the unicode and lambda are left as they were.
 
 # This is the source for the MSAPy application. It's composed of two parts:
 #
@@ -83,7 +84,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
-SetModuleVersion("msapy",("1.10","JGH.d","03/20/2014"))
+SetModuleVersion("msapy",("1.10","JGH.e","03/24/2014"))
 SetVersion(version)
 
 msa = None
@@ -420,9 +421,6 @@ class MSASpectrumFrame(wx.Frame):
         self.Bind(EVT_UPDATE_GRAPH, self.OnTimer)
         self.yLock = threading.Lock()
         self.screenWidth, self.screenHeight = wx.Display().GetGeometry()[2:4]
-
-        # Initialize cavity filter test status # JGH 1/26/14
-##        self.cftest = False
 
         # restore markers from preferences
         for attr, value in p.__dict__.items():
@@ -1558,7 +1556,7 @@ class MSASpectrumFrame(wx.Frame):
             print ("10,665 Reading path calibration")
         self.StopScanAndWait()
         p = self.prefs
-        directory, fileName = CalFileName(p.get("indexRBWSel", 0)+1)
+        directory, fileName = CalFileName(p.RBWSelindex+1)
         try:
             f = open(os.path.join(directory, fileName), "Ur")
             msa.magTableADC, msa.magTableDBm, msa.magTablePhase = \
@@ -1669,7 +1667,7 @@ class MSASpectrumFrame(wx.Frame):
 
     def SetMode_SA(self, event=None):
         self.SetMode(MSA.MODE_SA)
-
+        
     def SetMode_SATG(self, event):
         self.SetMode(MSA.MODE_SATG)
 
@@ -1717,9 +1715,9 @@ class MSASpectrumFrame(wx.Frame):
         global msa
         p = self.prefs
         if mode == MSA.MODE_SA:
-            p.switchSG = 0
+            p.switchSG = 0    # switchSG not implemented in software
         elif mode == MSA.MODE_SATG:
-            p.switchSG = 1
+            p.switchSG = 1    # switchSG not implemented in software
         elif mode == MSA.MODE_VNATran:
             p.switchTR = 0
         elif mode == MSA.MODE_VNARefl:

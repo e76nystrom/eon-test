@@ -1,5 +1,26 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+###############################################################################
+#
+#                       MODULAR SPECTRUM ANALYZER 
+#
+# The original Python software, written by Scott Forbes, was a complete rewrite
+# of the original Liberty Basic code developed by Scotty Sprowls (the designer
+# of the Spectrum Analyzer) and Sam Weterlin. Over a period of nine months,
+# comencing in May/June, 2013, Scott's code has been expanded and debugged by
+# Jim Hontoria, W1JGH and Eric Nystrom, W1EON in close consultation with Scotty.
+# Other contributors to the testing have been Will Dillon and  Earle Craig.
+#
+# Copyright (c) 2011, 2013 Scott Forbes
+#
+# This file may be distributed and/or modified under the terms of the
+# GNU General Public License version 2 as published by the Free Software
+# Foundation. (See COPYING.GPL for details.)
+#
+# This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
+# WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+#
+###############################################################################
 
 from msaGlobal import SetModuleVersion
 
@@ -17,7 +38,7 @@ if "-h" in sys.argv[1:]:
     print ("")
     print ("COMMAND LINE ARGUMENTS:")
 
-    print (" The following work with all systems:")
+    print (" The following works with all systems:")
     print ("-h for this help")
     print ("-dbg for debug mode")
     print ("-pro for profiler")

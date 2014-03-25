@@ -85,7 +85,7 @@ class Spectrum:
         f.write("!MSA, msapy %s\n" % GetVersion)
         f.write("!Date: %s\n" % time.ctime())
         f.write("!%s Sweep Path %d\n" % \
-            (("Linear", "Log")[p.isLogF], p.indexRBWSel+1))
+            (("Linear", "Log")[p.isLogF], p.RBWSelindex+1))
         f.write("# MHz S DB R 50\n")
         f.write("!  MHz       S21_dB    S21_Deg\n")
         Sdeg = self.Sdeg

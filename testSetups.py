@@ -17,7 +17,7 @@ class TestSetupsDialog(wx.Dialog):
 
         # the subset of prefs variables that define a test setup
         self.setupVars = ("calLevel", "calThruDelay", "dataMode", "fStart",
-            "fStop", "indexRBWSel", "isCentSpan", "isLogF", "continuous",
+            "fStop", "RBWSelindex", "isCentSpan", "isLogF", "continuous",
             "markerMode", "mode", "nSteps", "normRev", "planeExt", "rbw",
             "sigGenFreq", "spurTest", "sweepDir", "sweepRefresh", "tgOffset",
             "va0", "va1", "vb0", "vb1", "vFilterSelName", "wait")
@@ -107,7 +107,7 @@ class TestSetupsDialog(wx.Dialog):
         p = self.prefs
         name = "%s/%s/%g to %g/Path %d" % \
             (GetMsa().shortModeNames[p.mode], ("Linear", "Log")[p.isLogF],
-            p.fStart, p.fStop, p.indexRBWSel+1)
+            p.fStart, p.fStop, p.RBWSelindex+1)
         self.nameBox.SetValue(name)
 
     #--------------------------------------------------------------------------

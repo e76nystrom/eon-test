@@ -141,7 +141,7 @@ class PerformCalDialog(MainDialog):
         "be used as a coarse reference when the Band calibration is not "\
         "current.\n\n"\
         "   Base: %s \n\n"\
-        % (p.indexRBWSel + 1, msg, bandCalInfo, baseCalInfo))
+        % (p.RBWSelindex + 1, msg, bandCalInfo, baseCalInfo))
         self.textBox.Wrap(600)
 
         self.sizerV.Fit(self)
@@ -646,12 +646,12 @@ class PerformReflCalDialog(wx.Dialog):
         msa = self.frame.msa
         upd = False
         if oslCal == None:
-            oslCal = OslCal(self.frame.specP.title, msa.indexRBWSel + 1, isLogF,
+            oslCal = OslCal(self.frame.specP.title, msa.RBWSelindex + 1, isLogF,
                             msa._fStart, msa._fStop, msa._nSteps, msa._freqs)
             upd = True
         else:
             if oslCal.Changed(isLogF, msa._fStart, msa._fStop, msa._nSteps):
-                oslCal = OslCal(self.frame.specP.title, msa.indexRBWSel + 1, isLogF,
+                oslCal = OslCal(self.frame.specP.title, msa.RBWSelindex + 1, isLogF,
                                 msa._fStart, msa._fStop, msa._nSteps, msa._freqs)
                 upd = True
         if upd:
@@ -1270,7 +1270,7 @@ class OslCal:
         f.write("!MSA, msapy %s\n" % GetVersion)
         f.write("!Date: %s\n" % time.ctime())
         f.write("!%s Sweep Path %d S11Jig=%s; S11BridgeR0=%d; S21Jig=%s; S21JigR0=%s\n" % \
-                (("Linear", "Log")[p.isLogF], p.indexRBWSel+1, self.S11JigType, self.S11BridgeR0, "", ""))
+                (("Linear", "Log")[p.isLogF], p.RBWSelindex+1, self.S11JigType, self.S11BridgeR0, "", ""))
         f.write("!  MHz         A_real          A_imag          B_real          B_imag          C_Real          C_Imag         RefDB     RefDeg\n")
         for freq, bandA, bandB, bandC, bandRef in zip(self.Fmhz, self.OSLBandA, self.OSLBandB, self.OSLBandC, self.OSLBandRef):
             f.write("%11.6f %15.8e %15.8e %15.8e %15.8e %15.8e %15.8e %10.5f %7.2f\n" % \
