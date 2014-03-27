@@ -1,5 +1,5 @@
 from msaGlobal import GetMsa, isWin, SetModuleVersion
-import cmath, re, os, time, wx
+import cmath, inspect, re, os, time, wx
 from wx.lib.dialogs import alertDialog
 from math import cos, floor, sin, sqrt, tan
 from numpy import angle, exp, Inf, isnan, log10, mean, mod
@@ -14,6 +14,9 @@ truncateS11ToUnity = False
 constMaxValue = 1e12
 
 # Utilities.
+
+def lineno():
+    return inspect.currentframe().f_back.f_lineno
 
 # Convert to decibels.
 

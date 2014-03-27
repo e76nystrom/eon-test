@@ -543,7 +543,7 @@ class SweepDialog(wx.Dialog):
         p.rbw = msa.finalbw # JGH added
         p.switchRBW = p.RBWSelindex
 
-        self.calculateWait
+        self.calculateWait()
 
         i = self.videoFilt.GetSelection()
         if i>= 0:
