@@ -3,7 +3,7 @@ from msa import LO2
 from util import message
 import wx
 
-SetModuleVersion("cavityFilter",("1.02","JGH","03/20/2014"))
+SetModuleVersion("cavityFilter",("1.02","JGH_a","03/24/2014"))
 # Update of
 # SetModuleVersion("cavityFilter",("1.02","EON","03/11/2014"))
 
@@ -17,7 +17,7 @@ class CavityFilterTest(wx.Dialog):
         self.frame = frame
         p = self.prefs = frame.prefs
         framePos = frame.GetPosition()
-        pos = p.get("CavFiltWinPos", (framePos.x + 100, framePos.y + 100))
+        pos = p.get("CavFiltTestWinPos", (framePos.x + 100, framePos.y + 100))
         wx.Dialog.__init__(self, frame, -1, "Cavity Filter Test", pos, \
                             wx.DefaultSize, wx.DEFAULT_DIALOG_STYLE)
         # Keep initial values
@@ -27,12 +27,20 @@ class CavityFilterTest(wx.Dialog):
         "of steps is 10 times the span expressed in MHz. For example, if the "\
         "span is from -10 to 40 MHz, the steps = 400. If the steps are set wrong, "\
         "the proper value will be calculated by the system. Upon exit, the "\
-        "system returns to the parameters that where set upon entry."
+        "system returns to the parameters that where set upon entry.\n"\
+        "Sweep can be halted at any time and Sweep Parameters can be changed, "\
+        "then click Continue or Restart.\n"\
+        "The Cavity Filter Test window must be closed before MSA returns to normal. "\
+        "Then click 'Restart'."
                            
-        learnMore ="\nThe PLO2 will be commanded to maintain an offset from "\
-        "PLO1 by exactly the amount of the final IF, that is, PLO2 will always "\
-        "be equal to PLO1+IF. The PLL2 Rcounter buffer is commanded one time, "\
-        "to assure pdf will be 100 KHz; this is done during Init after 'Restart'. "\
+        learnMore ="\nThis test will display the frequency response of the Coaxial "\
+        "Cavity Filter. It reconfigures the MSA second local oscillator, PLO2 into "\
+        "a variable oscillator rather than a fixed one.\n"\
+        " This test modifies the normal MSA software to command the PLO2 "\
+        "to maintain an offset from PLO1 of exactly the amount of the Final I.F. "\
+        "that is, PLO2 will always be equal to PLO1+IF. The PLL2 Rcounter buffer "\
+        "is commanded one time, to assure pdf will be 100 KHz; this is done "\
+        "during Init after 'Restart'. "\
         "The PLO2 Ncounter buffer is commanded at each step in the sweep. "\
         "The actual frequency that is passed through the Cavity Filter is the "\
         "displayed frequency plus 1024 MHz. The Cavity Filter sweep limitations are: \n"\
@@ -41,10 +49,10 @@ class CavityFilterTest(wx.Dialog):
         "   -(PLO1 or PLO2 bottoming out at 0V is also limit, likely below 964 MHz)\n"\
         "   -the highest frequency possible is where PLO2 tops out (vco volts "\
         "near 5v, somewhere between 1050 to 1073 MHz)\n"\
-        "Sweep can be halted at any time and Sweep Parameters can be changed, "\
-        "then click Continue or Restart.\n"\
-        "The Cavity Filter Test window must be closed before MSA returns to normal. "\
-        "Then click 'Restart'."
+        " The purpose of sweeping the cavity Filter is to determine its center "\
+        "frequency with accuracy, its 3dB bandwidth (nominally 2MHz), its in-band "\
+        "ripple and its attenuation to a signal image at 1034.7 (-80dBc, minimum). "\
+        "This image corresponds to the second harmonic of the IF frequency"  
         self.learnMore = learnMore
         
         c = wx.ALIGN_CENTER

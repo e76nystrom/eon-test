@@ -33,7 +33,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.02","JGH.e","03/24/2014"))
+SetModuleVersion("msa",("1.02","JGH.f","03/24/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -455,8 +455,8 @@ class MSA:
             PLL2phasefreq = p.get("PLL2phasefreq", 4.000)
         else:
             PLL2phasefreq = 0.1
-        if 1 or debug:    
-            print("msa>426< Entering Initialize Hardware with cftest:", self.cftest, \
+        if 0 or debug:    
+            print("msa>459< Entering Initialize Hardware with cftest:", self.cftest, \
                   "and PLL2phasefreq:", PLL2phasefreq)
         PLL3phasefreq = p.get("PLL3phasefreq", 0.974)
         PLL1phasepol = p.get("PLL1phasepol", 0)
@@ -530,7 +530,7 @@ class MSA:
         LO2.CreateIntegerNcounter(appxVCO, self.masterclock)
         # This will be recreated in CreateSweepArray for cftest
         if 0 or debug:
-            print("msa>506< LO2.ncounter; ", LO2.ncounter)
+            print("msa>533< LO2.ncounter; ", LO2.ncounter)
 
         # Nregister: Acounter, Bcounter, Nbits
         # LO1 and LO3 are frequency dependent
@@ -539,14 +539,14 @@ class MSA:
         # (needs: ncounter, fcounter, PLL2)
         LO2.CreatePLLN()    # Creates Bcounter,Acounter, and PLLbits N0-N23)
         if 0 or debug:
-            print("msa>515< LO2 Acounter, BCounter, bits: ", \
+            print("msa>542< LO2 Acounter, BCounter, PLLbits: ", \
               LO2.Acounter, LO2.Bcounter, LO2.PLLbits)
 
         # 8b. Actual LO2 frequency
         LO2.freq = ((LO2.Bcounter*LO2.preselector) + LO2.Acounter + \
                     (LO2.fcounter/16))*LO2.pdf
         if 0 or debug:
-            print("msa>519< Actual LO2 frequency: ", LO2.freq)
+            print("msa>549< Actual LO2 frequency: ", LO2.freq)
 
         # 8c. CommandPLL2N
         # needs:N23-N0,control,Jcontrol=SELT,port,contclear,LEPLL=8
@@ -584,7 +584,7 @@ class MSA:
         self._magdata = mag
         self._phasedata = 0x10000 - phase
         if 0 or debug:
-            print ("msa>560< _ReadAD16Status: mag=0x%x, phase=0x%x" % \
+            print ("msa>587< _ReadAD16Status: mag=0x%x, phase=0x%x" % \
                     (self._magdata, self._phasedata))
 
     #--------------------------------------------------------------------------
@@ -597,7 +597,7 @@ class MSA:
             nM = len(syndut.synSpecM)
             nP = len(syndut.synSpecP)
             if nf != nM or nf != nP:
-                print ("msa>573< msa.InputSynth: length mismatch: \
+                print ("msa>600< msa.InputSynth: length mismatch: \
                         nf=%d nM=%d nP=%d" % (nf, nM, nP))
             else:
                 self._magdata =   interp(f, syndut.synSpecF, syndut.synSpecM)
@@ -668,7 +668,7 @@ class MSA:
                     self._ReadAD16Status()
                     # inverting the phase usually fails when signal is noise
                     if self._phasedata < 13107 or self._phasedata > 52429:
-                        print ("msa>641< invPhase failed at %13.6f mag 5d orig %5d new %5d" \
+                        print ("msa>671< invPhase failed at %13.6f mag %5d orig %5d new %5d" \
                                % (f, self._magdata, oldPhase, self._phasedata))
                         self.invPhase ^= 1
 
@@ -766,10 +766,10 @@ class MSA:
                         Sdb  -= dSdb
                         Sdeg -= dSdeg
                         if show:
-                            print ("msa>739< jumped gap=", f, H1f, f // 1000, \
+                            print ("msa>769< jumped gap=", f, H1f, f // 1000, \
                                 H1f // 1000, dSdb)
                     if show:
-                        print ("msa>742< hist=", ["%7.2f %7.2f %7.2f" % x for x in hist], \
+                        print ("msa>772< hist=", ["%7.2f %7.2f %7.2f" % x for x in hist], \
                             "Sdb=%7.2f" % Sdb, "Sdeg=%7.2f" % Sdeg, \
                             "Hq=%d" % self._Hquad, "Sq=%1d" % Squad, \
                             "bases=%7.2f" % self._baseSdb, \
@@ -917,8 +917,8 @@ class MSA:
             if y == 2000:
                 self.step2k = x
         if 0 or debug:
-            print("msa>893< 1000 is at step #", self.step1k)
-            print("msa>894< 2000 is at step #", self.step2k)
+            print("msa>920< 1000 is at step #", self.step1k)
+            print("msa>921< 2000 is at step #", self.step2k)
 
     #--------------------------------------------------------------------------
     # Start an asynchronous scan of a spectrum. The results may be read at
@@ -985,7 +985,7 @@ class MSA:
             # Gets ncounter, fcounter, pdf and ddsoutput
             LO1.Calculate(thisfreq + LO2.freq - self.finalfreq)
             if 0 or debug:
-                print("msa>961< f, LO2.freq, thisfreq, LO1.freq: ", f, LO2.freq, thisfreq, LO1.freq)
+                print("msa>988< f, LO2.freq, thisfreq, LO1.freq: ", f, thisfreq, LO1.freq)
 
             # Ncounter (For LO2: creates: ncounter, fcounter(0))
             if self.cftest == False:
@@ -994,6 +994,7 @@ class MSA:
                 appxVCO = self.appxLO2
                 LO2.CreateIntegerNcounter(appxVCO, self.masterclock)
                 LO2.CreatePLLN()
+                LO2.DDSbits = 0 ; LO2.fcounter = 0
             else:
         #--------------------------------------------------------------------------
                 # THIS SECTION TO BE USED IN cftest
@@ -1003,14 +1004,14 @@ class MSA:
                 cavityLO2 = thisfreq + self.finalfreq + cavCenterFreq 
                 LO2.CreateIntegerNcounter(cavityLO2, self.masterclock)
                 if 0 or debug:
-                    print("msa>979< cavityLO2, ncounter, fcounter: ", \
+                    print("msa>1007< cavityLO2, ncounter, fcounter: ", \
                           cavityLO2, LO2.ncounter, LO2.fcounter)
-                self.ncounter = LO2.ncounter
                 LO2.CreatePLLN()
                 LO2.freq = ((LO2.Bcounter*LO2.preselector) + LO2.Acounter+ \
                             (LO2.fcounter/16))*LO2.pdf
+                LO2.DDSbits = 0 ; LO2.fcounter = 0
                 if 0 or debug:
-                    print("msa>986< cavityLO2, rcounter, pdf, ncounter, fcounter, \
+                    print("msa>1014< cavityLO2, rcounter, pdf, ncounter, fcounter, \
                           Acounter, Bcounter, PLLbits: ",\
                           cavityLO2, LO2.rcounter, LO2.pdf, LO2.ncounter, LO2.fcounter,
                           LO2.Acounter, LO2.Bcounter, LO2.PLLbits)
@@ -1025,9 +1026,11 @@ class MSA:
             # No need to worry for DATAPLL2 since is common to DDS3
             # PLLs go out MSB first, with a 16-bit leader of zeros
             PLL1bits = LO1.PLLbits
+            PLL2bits = LO2.PLLbits
             PLL3bits = LO3.PLLbits
             msb = 23 + 16
             shift1 = msb - cb.P1_PLL1DataBit
+            shift2 = msb - cb.P1_PLL2DataBit 
             shift3 = msb - cb.P1_PLL3DataBit
             mask = 1 << msb
             # pre-shift 40 bits for each DDS so the LSB aligns with its port
@@ -1042,21 +1045,21 @@ class MSA:
             byteList = []   # JGH 2/9/14
             for i in range(40):
                 # combine the current bit for each device and clk them out together
-    ##            a = (DDS3bits & cb.P1_DDS3Data) + ((PLL3bits & mask) >> shift3) + \
-    ##                (DDS1bits & cb.P1_DDS1Data) + ((PLL1bits & mask) >> shift1) + \
-    ##                self.bitsRBW # JGH line changed for next one
                 a = (DDS3bits & cb.P1_DDS3Data) + ((PLL3bits & mask) >> shift3) + \
-                    (DDS1bits & cb.P1_DDS1Data) + ((PLL1bits & mask) >> shift1)
+                     (DDS1bits & cb.P1_DDS1Data) + ((PLL1bits & mask) >> shift1)
+                if self.cftest == True:
+                    a += ((PLL2bits & mask) >> shift2)
+                if self.rbwP4 == False:       
+                    a += self.bitsRBW 
                 byteList.append(a)  # JGH 2/9/14
-                # shift next bit into position
-                DDS3bits >>= 1; PLL3bits <<= 1; DDS1bits >>= 1; PLL1bits <<= 1
+                # shift next bit into position NOT USED ANYMORE
+                DDS3bits >>= 1; PLL3bits <<= 1
+                DDS1bits >>= 1; PLL1bits <<= 1
+                
             SweepArray.append(byteList)
 
-            # Build VarsArray
-##            if self.cftest == False:
-##                LO2.ddsoutput = LO2.fcounter = 0
-            LO2.ddsoutput = LO2.fcounter = 0
-            RealFinalIF = LO2.freq - f
+            # MARTHA: array containg all parameters for ONE step
+
 ##            The RealFinalIF as defined in LB is:
 ##            LO2 - (PLL1array(thisstep,45)*DDS1array(thisstep,46)/rcounter1) + \
 ##                datatable(thisstep,1) + baseFrequency, 5, 380, 180, 13
@@ -1067,7 +1070,6 @@ class MSA:
 ##            baseFrequency =
 ##            and ends up saying:
 ##            RealFinalIF = LO2 -(LO1-thisfreq)
-
             RealFinalIF = LO2.freq -(LO1.freq - thisfreq)
             
             VarsArray = [f, \
@@ -1078,11 +1080,13 @@ class MSA:
                          LO3.ddsoutput, LO3.freq, LO3.pdf, LO3.ncounter, LO3.Bcounter, \
                          LO3.Acounter,  LO3.fcounter, LO3.rcounter, \
                          RealFinalIF, self.masterclock]
+
+            # BIG BERTHA: array containing parameters for ALL steps, used to Show Variables
             StepArray.append(VarsArray)
 
         if 0 or debug:
-            print("msa>1060< StepArray[0]: ", StepArray[0])
-            print("msa>1061< Last Step: ", StepArray[self._nSteps])
+            print("msa>1088< StepArray[0]: ", StepArray[0])
+            print("msa>1089< Last Step: ", StepArray[self._nSteps])
         #step1k = self.step1k ; step2k =self.step2k
         self.SweepArray = SweepArray
         self.StepArray = StepArray
@@ -1211,7 +1215,7 @@ class MSA_LO:
         self.Acounter = 0.                  # PLL A counter
         self.Bcounter = 0.                  # PLL B counter
         self.fcounter = 0.                  # PLL fractional-mode N counter
-        self.preselector = 32               # Default
+        self.preselector = 32               # DEFAULT
         if 0 or debug:
             print ("msa>1191< LO%d init: PDF=%f" % (id, PLLphasefreq))
 
@@ -1311,6 +1315,10 @@ class MSA_LO:
             self.preselector = preselector
             self.CommandPLL((self.phasepolarity << 7) + 0x3 + (0x1 << 15) \
                             + (0x1 << 18) + (N23 << 23))
+            # Note: if the 4112 tends to oscillate due to high charge pump
+            # current, change above to:
+            # self.CommandPLL((self.phasepolarity << 7) + 0x3 + (0x9 << 15) \
+            #               + (0x1 << 18) + (N23 << 23))
             self.CommandPLL((self.rcounter << 2) + (N22 << 22))
 
     #--------------------------------------------------------------------------
@@ -1384,7 +1392,7 @@ class MSA_LO:
         # disable buffer, leaving last known PDM state latched
         cb.OutControl(cb.contclear)
         if 0 or debug:
-            print ("msa>1362< ResetDDSserSLIM done")
+            print ("msa>1397< ResetDDSserSLIM done")
 
     #--------------------------------------------------------------------------
     # Create Integer Mode N counter.
@@ -1392,13 +1400,14 @@ class MSA_LO:
     def CreateIntegerNcounter(self, appxVCO, reference):
         # approximates the Ncounter for PLL
         ncount = divSafe(appxVCO, divSafe(reference, self.rcounter))
-        self.ncounter = int(round(ncount))
+        ncounter = int(round(ncount))
         if 0 or debug:
-            print("msa>1372< appxVCO, reference, ncounter: ", \
-                  appxVCO, reference, self.ncounter)
+            print("msa>1407< appxVCO, reference, ncounter: ", \
+                  appxVCO, reference, ncounter)
         self.fcounter = 0
         # actual phase freq of PLL
-        #self.pdf = divSafe(appxVCO, self.ncounter) # JGH 2/2/14 Beware of globals!
+        self.pdf = divSafe(appxVCO, ncounter) # JGH 2/2/14 Beware of globals!
+        self.ncounter = ncounter
 
     #--------------------------------------------------------------------------
     # Create PLL N register.
@@ -1413,8 +1422,8 @@ class MSA_LO:
         Acounter = int(self.ncounter-(Bcounter*preselector))
 
         if 0 or debug:
-            print("msa>1391< self.PLLtype, ncounter: ", self.PLLtype, self.ncounter)
-            print("msa>1392< LO%d: Acounter=" % self.id, Acounter, "Bcounter=", Bcounter)
+            print("msa>1422< self.PLLtype, ncounter: ", self.PLLtype, self.ncounter)
+            print("msa>1423< LO%d: Acounter=" % self.id, Acounter, "Bcounter=", Bcounter)
 
         if self.PLLtype == "2325":
             if Bcounter < 3:
@@ -1470,8 +1479,8 @@ class MSA_LO:
         self.Bcounter = Bcounter
 
         if 0 or debug:
-            print("msa>1392< LO%d: N= 0x%06x" % (self.id, Nreg))
-            print("msa>1449< PLLbits(Nreg), Acounter, Bcounter: ", self.PLLbits, self.Acounter, self.Bcounter)
+            print("msa>1479< LO%d: N= 0x%06x" % (self.id, Nreg))
+            print("msa>1480< PLLbits(Nreg), Acounter, Bcounter: ", self.PLLbits, self.Acounter, self.Bcounter)
 
     #--------------------------------------------------------------------------
     # Calculate PLL and DDS settings for given frequency.
@@ -1484,16 +1493,13 @@ class MSA_LO:
         reference = self.appxdds
 
         if 0 or debug:
-            print ("msa>1462< LO%d: freq=" % self.id, freq, "ref=", reference, \
+            print ("msa>1497< LO%d: freq=" % self.id, freq, "ref=", reference, \
                 "rcounter=", self.rcounter)
 
-        # JGH 2/7/14
-        self.CreateIntegerNcounter(appxVCO, reference)
-        self.pdf = divSafe(appxVCO, self.ncounter) # JGH 2/2/14
-        # JGH 2/7/14
+        self.CreateIntegerNcounter(appxVCO, reference) # JGH 2/7/14
 
         if 0 or debug:
-            print ("msa>1471< LO%d: ncounter=" % self.id, self.ncounter, "fcounter=", \
+            print ("msa>1503< LO%d: ncounter=" % self.id, self.ncounter, "fcounter=", \
                 self.fcounter, "pdf=", self.pdf)
 
         # actual output of DDS (input Ref to PLL)
@@ -1507,7 +1513,6 @@ class MSA_LO:
             raise RuntimeError("DDS%doutput outside filter range: output=%g "\
                                "pdf=%g" % (self.id, self.ddsoutput, self.pdf))
 
-
         #CreateBaseForDDSarray --
 
         # The formula for the frequency output of the DDS
@@ -1517,4 +1522,4 @@ class MSA_LO:
         base = int(round(divSafe(self.ddsoutput * (1<<32), GetMsa().masterclock))) # JGH 2/2/14
         self.DDSbits = base
         if 0 or debug:
-            print ("msa>1495< LO%d: base=%f=0x%x" % (self.id, base, base))
+            print ("msa>1526< LO%d: base=%f=0x%x" % (self.id, base, base))
