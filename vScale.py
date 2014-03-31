@@ -198,13 +198,14 @@ class VScale:
     #--------------------------------------------------------------------------
     # Perform auto-scale on limits to fit data.
 
-    def AutoScale(self, frame):
+    def AutoScale(self, frame, tr=None):
         dataType = self.dataType
         if dataType.units == "Deg":
             self.top = 180
             self.bot = -180
         elif self.typeIndex > 0:
-            tr = dataType(frame.spectrum, 0)
+            if tr == None:
+                tr = dataType(frame.spectrum, 0)
             v = tr.v
             vmin = v[v.argmin()]
             vmax = v[v.argmax()]

@@ -192,7 +192,7 @@ class MSASpectrumFrame(wx.Frame):
             ("Cavity Filter Test ...",  "CavFiltTest", -1), # JGH 1/25/14
             ("Control Board Tests...",  "CtlBrdTests",-1),
             ("-",                       None, -1),
-            ("Synthetic DUT...\tCTRL-D", "SynDUT", -1)
+            ("Synthetic DUT...\tCTRL-D", "SynDUT", -1),
         ))
         self.sweepMenu = self.CreateMenu("&Sweep", [
             ("Sweep Parameters\tCTRL-F", "SetSweep", -1),
@@ -223,8 +223,9 @@ class MSASpectrumFrame(wx.Frame):
             ("Filter Analysis...\tSHIFT-CTRL-F",  "AnalyzeFilter", -1),
             ("Component Meter...\tSHIFT-CTRL-C",  "ComponentMeter", -1),
             ("RLC Analysis...\tSHIFT-CTRL-R",     "AnalyzeRLC", -1),
-            ("Coax Parameters...\tSHIFT-CTRL-X",  "CoaxParms", -1), # EON Jan 22, 2014
+            ("Coax Parameters...\tSHIFT-CTRL-X",  "CoaxParms", -1),
             ("Crystal Analysis...\tSHIFT-CTRL-K", "AnalyzeCrystal", -1),
+            ("Group Delay...\tSHIFT-CTRL-G",  "GroupDelay", -1),
             ("Step Attenuator Series...\tSHIFT-CTRL-S", "StepAttenuator", -1),
         ))
         self.operatingCalMenu = self.CreateMenu("&Operating Cal", (
@@ -236,11 +237,14 @@ class MSASpectrumFrame(wx.Frame):
             ("Reference To Baseline",   "SetCalRef_Base", -2),
             ("No Reference",            "SetCalRef_None", -2),
         ))
+#        self.twoPortMenu = self.CreateMenu("&Two Port", (
+#            ("Show Two Port Window...\tCTRL-P", "TwoPortShow", -5),
+#        ))
         self.modeMenu = self.CreateMenu("&Mode", (
             ("Spectrum Analyzer",       "SetMode_SA", -2),
             ("Spectrum Analyzer with TG", "SetMode_SATG", -2),
             ("VNA Transmission",        "SetMode_VNATran", -2),
-            ("VNA Reflection",          "SetMode_VNARefl", -2),
+            ("VNA Reflection",          "SetMode_VNARefl", -2)
         ))
         self.helpMenu = self.CreateMenu("&Help", (
             ("About",                   "OnAbout", wx.ID_ABOUT),
@@ -409,7 +413,8 @@ class MSASpectrumFrame(wx.Frame):
         self.filterAnDlg = None
         self.compDlg = None
         self.tranRLCDlg = None
-        self.coaxDlg = None # EON Jan 29, 2014
+        self.coaxDlg = None
+        self.grpDlyDlg = None
         self.crystalDlg = None
         self.stepDlg = None
         self.varDlg = None
@@ -469,7 +474,7 @@ class MSASpectrumFrame(wx.Frame):
         self.funcModeList[MSA.MODE_SA] = ["filter","step"]
         self.funcModeList[MSA.MODE_SATG] = ["filter","component","step"]
         self.funcModeList[MSA.MODE_VNATran] = ["filter","component","rlc","crystal","group","step"]
-        self.funcModeList[MSA.MODE_VNARefl] = ["component","rlc","coax","group","s21","step"]
+        self.funcModeList[MSA.MODE_VNARefl] = ["component","rlc","coax","s21","step"]
 
         self.InitMode(msa.mode)
 
@@ -507,12 +512,15 @@ class MSASpectrumFrame(wx.Frame):
     # Create a menu of given items calling given routines.
     # An id == -2 sets item to be in a radio group.
 
-    def CreateMenu(self, name, itemList):
+    def CreateMenu(self, menuName, menuArray):
+        if 0 or debug:
+            print("msapy>516< barName:", menuName, "menuArray:", menuArray, "Length:", len(menuArray))
         menu = wx.Menu()
         s = 0
         submenu = None
         subName = ""
-        for itemName, handlerName, menuId in itemList:
+        
+        for (itemName, handlerName, menuId) in menuArray:
             if itemName == "-":
                 menu.AppendSeparator()
             else:
@@ -535,7 +543,8 @@ class MSASpectrumFrame(wx.Frame):
                         if s == 0:
                             menu.AppendMenu(menuId, subName, submenu)
                 elif menuId > 0 and menuId < 10:
-                    #print(">>>14679<<< Next " + str(menuId) + " items are part of a submenu")
+                    if 0 or debug:
+                        print("msapy>546< Next " + str(menuId) + " items are part of a submenu")
                     subName = itemName
                     submenu = wx.Menu()
                     s = menuId
@@ -547,7 +556,8 @@ class MSASpectrumFrame(wx.Frame):
                                 getattr(self, handlerName))
                 else:
                     item.Enable(False)
-        self.menubar.Append(menu, name)
+        self.menubar.Append(menu, menuName)
+        
         return menu
     
     #--------------------------------------------------------------------------
@@ -581,7 +591,7 @@ class MSASpectrumFrame(wx.Frame):
         self.needRestart = False
         if msa.syndut: # JGH 2/8/14 syndutHook5
             if 0 or debug:
-                print ("msapy>587< GETTING SYNTHETIC DATA")
+                print ("msapy>593< GETTING SYNTHETIC DATA")
             msa.syndut.GenSynthInput()
         p = self.prefs
 
@@ -838,7 +848,7 @@ class MSASpectrumFrame(wx.Frame):
 
     def DrawTraces(self):
         global msa
-        if debug:
+        if 0 or debug:
             print ("DrawTraces")
         specP = self.specP
         specP.traces = {}
@@ -1130,7 +1140,7 @@ class MSASpectrumFrame(wx.Frame):
         p = self.prefs
         specP = self.specP
         if 0 or debug:
-            print ("msapy>1135< RefreshAllParms", specP._isReady, self.refreshing)
+            print ("msapy>1142< RefreshAllParms", specP._isReady, self.refreshing)
 
 ##        # checkmark the current marker menu item in the Sweep menu
 ##        items = self.sweepMenu.Markers.GetSubMenu()
@@ -1640,20 +1650,27 @@ class MSASpectrumFrame(wx.Frame):
             self.tranRLCDlg = AnalyzeRLCDialog(self)
         else:
             self.tranRLCDlg.Raise()
-    # Start EON Jan 22, 2014
+
     def CoaxParms(self,event):
-        if not self.coaxDlg: # EON Jan 29, 2014
+        if not self.coaxDlg:
             from coax import CoaxParmDialog
             self.coaxDlg = CoaxParmDialog(self)
         else:
             self.coaxDlg.Raise()
-    # End EON Jan 22, 2014
+
     def AnalyzeCrystal(self, event):
         if not self.crystalDlg:
             from crystal import CrystAnalDialog
             self.crystalDlg = CrystAnalDialog(self)
         else:
             self.crystalDlg.Raise()
+
+    def GroupDelay(self,event):
+        if not self.grpDlyDlg:
+            from  groupDelay import GroupDelayDialog
+            self.grpDlyDlg = GroupDelayDialog(self)
+        else:
+            self.grpDlyDlg.Raise()
 
     def StepAttenuator(self, event):
         if not self.stepDlg:

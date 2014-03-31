@@ -116,6 +116,7 @@ class CoaxParmDialog(FunctionDialog):
         if self.pos == wx.DefaultPosition:
             self.Center()
         self.Show()
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnVelLen(self, event):
         if self.velFactRb.GetValue():

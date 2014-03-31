@@ -2,6 +2,8 @@ from msaGlobal import incremental, SetModuleVersion
 import copy as dcopy
 from numpy import append, convolve, diff, exp, log10
 from numpy import  nan_to_num, pi, seterr, sqrt, zeros
+from numpy import ones, vstack
+from numpy.linalg import lstsq
 from util import mW, MHz, uF, uH
 from util import truncateS11ToUnity
 from util import min2
@@ -327,43 +329,58 @@ class GroupDelayTrace(S21Trace):
     units = "sec"
     top = 0
     bot = 0
-    def __init__(self, spec, iScale):
+    def __init__(self, spec, iScale, nPoints=0):
         S21Trace.__init__(self, spec, iScale)
-        # first filter phases (n is boxcar width, must be odd)
-        ph = pi*spec.Scdeg/180
-        nb = (len(ph)//60)*2 + 3
-        self.boxcar = zeros(nb) + 1/nb
-        # apply boxcar and trim result because boxcar appends points
-        ph = convolve(ph, self.boxcar)
-        self.dn = len(ph) - len(spec.Scdeg)
-        self.dn2 = self.dn // 2
-        ph = ph[self.dn2:self.dn2-self.dn]
-        # get pointwise delta-frequency (may be log scale)
-        self.df = (append(spec.f[1:], 0) - spec.f) * MHz
-        ##print ("gd len", nb, len(ph), len(spec.f), len(df)
-        # then differentiate to get group delay
-        gd = -diff(ph)
-        # append because diff() takes off 1 point, and scale
-        self.v = append(gd, 0) / (2*pi*self.df)
-        ##print ("gd:", ph[20:25], gd[20:25], df[20:25]
+        self.v = v = zeros(spec.nSteps + 1)
+        if nPoints:
+            self.calcGd(nPoints)
+            return
+
+        Scdeg = spec.Scdeg
+        Fmhz = spec.Fmhz
+        lastY = Scdeg[0]
+        lastX = Fmhz[0]
+        for i in range(1, spec.maxStep):
+            val = Scdeg[i]
+            deltaY = val - lastY
+            if deltaY > 0.5:
+                deltaY -= 1 
+            elif deltaY < -0.5:
+                deltaY += 1
+            lastY = val
+            val = Fmhz[i]
+            deltaF = val - lastX
+            lastX = val
+            v[i] = -deltaY / (deltaF * 360000000.0)
 
     def SetStep(self, spec, i):
         S21Trace.SetStep(self, spec, i)
-        # first filter phases (n is boxcar width, must be odd)
-        ph = pi*spec.Scdeg/180
-        # nb = (len(ph)//60)*2 + 3
-        # boxcar = zeros(nb) + 1/nb
-        # apply boxcar and trim result because boxcar appends points
-        ph = convolve(ph, self.boxcar)
-        # dn = len(ph) - len(spec.Scdeg)
-        # dn2 = dn // 2
-        ph = ph[self.dn2:self.dn2-self.dn]
-        # get pointwise delta-frequency (may be log scale)
-        # df = (append(spec.f[1:], 0) - spec.f) * MHz
-        # then differentiate to get group delay
-        gd = -diff(ph)
-        # append because diff() takes off 1 point, and scale
-        self.v = append(gd, 0) / (2*pi*self.df)
+        Scdeg = spec.Scdeg
+        Fmhz = spec.Fmhz
+        if i > 0:
+            deltaY = Scdeg[i] - Scdeg[i - 1]
+            if deltaY > 0.5:
+                deltaY -= 1 
+            elif deltaY < -0.5:
+                deltaY += 1
+            deltaF = Fmhz[i] - Fmhz[i - 1]
+            self.v[i] = -deltaY / (deltaF * 360000000.0)
+
+    def calcGd(self, nPoints):
+        spec = self.spec
+        nSteps = spec.maxStep
+        self.nPoints = nPoints;
+        nLeft = int(nPoints / 2)
+        self.Fmhz = Fmhz = spec.Fmhz
+        self.Scdeg = Scdeg = spec.Scdeg
+        for i in range(nSteps):
+            start = max(0, i - nLeft)
+            end = min(nSteps, start + nPoints)
+            x = Fmhz[start : end]
+            y = Scdeg[start : end]
+            A = vstack([x, ones(len(x))]).T
+            m, c = lstsq(A, y)[0]
+            self.v[i] = -m / 360000000.0
 
 traceTypesLists[MSA.MODE_VNATran] = (
     NoTrace,

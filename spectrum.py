@@ -11,12 +11,10 @@ SetModuleVersion("spectrum",("1.02","EON","03/11/2014"))
 
 class Spectrum:
     def __init__(self, when, pathNo, fStart, fStop, nSteps, Fmhz):
-        # Start EON Jan 10 2014
         self.isLogF = (Fmhz[0] + Fmhz[2])/2 != Fmhz[1]
         self.desc = "%s, Path %d, %d %s steps, %g to %g MHz." % \
             (when, pathNo, nSteps, ("linear", "log")[self.isLogF], \
             fStart, fStop)
-        # End EON Jan 10 2014
         self.nSteps = nSteps        # number of steps in scan
         self.Fmhz = Fmhz            # array of frequencies (MHz), one per step
         n = nSteps + 1
@@ -34,6 +32,7 @@ class Spectrum:
         self.trva = None
         self.vbType = None
         self.trvb = None
+        self.maxStep = 0
         LogGUIEvent("Spectrum n=%d" % n)
 
     # Set values on step i in the spectrum. Returns True if last step.
@@ -55,6 +54,8 @@ class Spectrum:
                 self.trva.SetStep(self, i)
             if self.trvb:
                 self.trvb.SetStep(self, i)
+            if i > self.maxStep:
+                self.maxStep = i
         return i == self.nSteps
 
     # Spectrum[i] returns the tuple (Fmhz, Sdb, Sdeg) for step i
@@ -140,12 +141,10 @@ class Spectrum:
                 else:
                     words = string.split(line)
                     if len(words) != 3:
-                    # Start EON Jan 22, 2014
                         f.close()
                         return None
-##                        raise ValueError( \
-##                            "S1P file format wrong: expected freq, Sdb, Sdeg")
-                    # End EON Jan 22, 2014
+                        #raise ValueError( \
+                        #    "S1P file format wrong: expected freq, Sdb, Sdeg")
                     Fmhz.append(float(words[0]) * fScale)
                     Sdb.append(float(words[1]))
                     Sdeg.append(float(words[2]))
@@ -153,10 +152,8 @@ class Spectrum:
 
         n = len(Fmhz)
         if n == 0:
-            # Start EON Jan 22, 2014
             return None
-##            raise ValueError("S1P file: no data found")
-            # End EON Jan 22, 2014
+            #raise ValueError("S1P file: no data found")
 
         print ("Read %d steps." % (n-1), "Start=", Fmhz[0], "Stop=", Fmhz[-1])
         this = cls(when, pathNo, Fmhz[0], Fmhz[-1], n - 1, array(Fmhz))
