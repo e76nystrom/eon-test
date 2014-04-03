@@ -68,7 +68,7 @@ print("sys.platform: ", sys.platform)
 import msaGlobal
 from msaGlobal import appdir, EVT_UPDATE_GRAPH, GetHardwarePresent, \
     incremental, isMac, isWin, msPerUpdate, resdir, SetFontSize, \
-    SetModuleVersion, SetVersion, slowDisplay, winUsesParallelPort
+    SetModuleVersion, SetVersion, slowDisplay
 import os, re, string, time, threading, wx
 import copy as dcopy
 import numpy.version
@@ -103,7 +103,7 @@ print ("PROGRAM STARTED")
 #==============================================================================
 # Parallel port I/O interface.
 
-##if isWin and winUsesParallelPort: # THIS LINE IS ALWAYS FALSE AND THAT'S OK
+##if isWin and p.winLPT: # THIS LINE IS ALWAYS FALSE AND THAT'S OK
 ##    # Windows DLL for accessing parallel port
 ##    from ctypes import windll
 ##    try:
@@ -382,7 +382,7 @@ class MSASpectrumFrame(wx.Frame):
         p.get("switchPulse", 0) # JGH added Oct23
         p.get("syntData", False)
         p.get("rbwP4", False) # RBW may use P4 (new, True) or P1 (classic, False)
-        p.get("winLPT", False)
+        p.get("winLPT", False) # True when Windows uses parallel port
 
         # initialize spectrum graph
         p.get("fStart", -1.5)

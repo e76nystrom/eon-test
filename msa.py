@@ -24,7 +24,7 @@
 
 from msaGlobal import GetHardwarePresent, GetMsa, isWin, \
     logEvents, msPerUpdate, SetCb, SetHardwarePresent, \
-    SetLO1, SetLO2, SetLO3, SetModuleVersion, winUsesParallelPort
+    SetLO1, SetLO2, SetLO3, SetModuleVersion
 import thread, time, traceback, wx
 from numpy import interp, isnan, linspace, log10, logspace, nan
 from Queue import Queue
@@ -65,6 +65,7 @@ class MSA:
         msa = self
         self.frame = frame
         p = frame.prefs
+        self.winLPT = p.get("winLPT", False) # True if Win uses parallel port
         self.mode = p.get("mode", self.MODE_SA) # Default start mode
         # Exact frequency of the Master Clock (in MHz).
         self.masterclock = p.get("masterclock", 64.)
@@ -405,6 +406,7 @@ class MSA:
 
     def InitializeHardware(self):
         global cb, hardwarePresent, LO1, LO2, LO3
+        p = self.frame.prefs
 
         from msa_cb import MSA_CB
         hardwarePresent = GetHardwarePresent()
@@ -416,7 +418,7 @@ class MSA:
         # Determine which interface to use to talk to the MSA's Control Board
 
         if not cb:
-            if isWin and winUsesParallelPort:
+            if isWin and p.winLPT:
                 from msa_cb_pc import MSA_CB_PC
                 cb = MSA_CB_PC()
             else:

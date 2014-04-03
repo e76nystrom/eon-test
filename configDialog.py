@@ -1,5 +1,5 @@
 from msaGlobal import appdir, GetLO1, GetLO3, GetModuleInfo, GetMsa, \
-    isMac, isWin, resdir, SetCb, SetModuleVersion, winUsesParallelPort
+    isMac, isWin, resdir, SetCb, SetModuleVersion
 import os, sys
 import wx.grid
 from wx.lib.dialogs import ScrolledMessageDialog
@@ -383,7 +383,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         
         syntData = p.syntData 
         p.syntData = self.syntDataCB.GetValue()
-        print("syntData: ", self.syntDataCB.GetValue())
+        print("configDialog>386< syntData: ", self.syntDataCB.GetValue())
         if not syntData and p.syntData:
             from synDUT import SynDUTDialog
             msa.syndut = SynDUTDialog(self.frame)
@@ -392,16 +392,17 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
             msa.syndut = None
                       
         CBopt = self.CBoptCM.GetValue()
-        print("CBopt:", CBopt)
         if CBopt == "LPT": # JGH Only Windows does this
-            p.winLPT = winUsesParallelPort = True
+            p.winLPT = True
             # Windows DLL for accessing parallel port
             from ctypes import windll
             try:
+                cb = ""
                 windll.LoadLibrary(os.path.join(resdir, "inpout32.dll"))
                 from msa_cb_pc import MSA_CB_PC
                 cb = MSA_CB_PC()
                 SetCb(cb)
+
             except WindowsError:
                 # Start up an application just to show error dialog
                 app = wx.App(redirect=False)
@@ -431,7 +432,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
             SetCb(cb)
         
         p.rbwP4 = self.rbwP4CB.GetValue()   # JGH 3/18/14
-        print("configDialog>434< rbwP4: ", self.rbwP4CB.GetValue())
+
         # JGH end of additions
 
         p.configWinPos = self.GetPosition().Get()

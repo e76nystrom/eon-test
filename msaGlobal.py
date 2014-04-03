@@ -24,7 +24,6 @@ msPerUpdate = 100
 incremental = True
 
 isWin   = (sys.platform == "win32")
-winUsesParallelPort = False # DO NOT TOUCH THIS LINE
 isLinux=(sys.platform == "linux2")
 isMac=(sys.platform=="darwin" or not (isWin or isLinux))
 
