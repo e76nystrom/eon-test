@@ -1,13 +1,14 @@
-from msaGlobal import GetMsa, SetModuleVersion
-import sys, wx
+from msaGlobal import appdir, fontSize, isMac, GetMsa, SetModuleVersion
+import os, sys, wx
 from numpy import floor, isnan, pi
 from wx.lib.dialogs import alertDialog
 from functionDialog import FunctionDialog
 from msa import MSA
-from util import floatOrEmpty, gstr, MHz, Ohms, pF, si, uH
+from util import floatOrEmpty, gstr, MHz, Ohms, pF, ShouldntOverwrite, si, uH
+
 from marker import Marker
 
-SetModuleVersion("crystal",("1.02","EON","03/11/2014"))
+SetModuleVersion("crystal",("1.03","EON","04/01/2014"))
 
 #==============================================================================
 # The Crystal Analysis dialog box.
@@ -50,7 +51,7 @@ class CrystAnalDialog(FunctionDialog):
             "which will rescan the area around Fs." % FsMsg
 
         # description
-        st = wx.StaticText(self, -1, "DETERMINATION OF CRYSTAL PARAMETERS")
+        st = wx.StaticText(self, -1, "Determination Of Crystal Parameters")
         sizerV.Add(st, 0, c|wx.TOP|wx.LEFT|wx.RIGHT, 10)
         st = wx.StaticText(self, -1, \
             "There must be an existing S21 scan of the crystal in a Series "\
@@ -278,8 +279,10 @@ class CrystAnalDialog(FunctionDialog):
     def OnSetIDNum(self, event):
         dlg = wx.TextEntryDialog(self, "Enter numeric ID for this crystal",
                 "Crystal ID", "")
+        dlg.SetValue(str(self.id))
         if dlg.ShowModal() == wx.ID_OK:
             self.id = int(dlg.GetValue())
+
 
     #--------------------------------------------------------------------------
     # Enable/disable buttons- disabled while actively rescanning.

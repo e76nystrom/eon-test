@@ -60,6 +60,10 @@ class Trace:
             j = int((mhz - f0) / df + 0.5)
         else:
             j = 0
+        if j < 0:
+            j = 0
+        elif j >= len(self.Fmhz):
+            j = len(self.Fmhz) - 1
         if returnBaseSpacing:
             return j, f0, df
         return j

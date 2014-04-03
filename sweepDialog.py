@@ -152,7 +152,7 @@ class SweepDialog(wx.Dialog):
         sizerH3V1.Add(wx.StaticText(self, -1, "Steps/Sweep"), 0, wx.TOP, 5)
         sizerH3V1H1 = wx.BoxSizer(wx.HORIZONTAL)
         self.stepsTB = tc = wx.TextCtrl(self, -1, str(p.nSteps), size=(50, -1))
-        self.Bind(wx.EVT_TEXT, self.setStepsTB, tc)
+        #self.Bind(wx.EVT_TEXT, self.setStepsTB, tc)
         tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
         sizerH3V1H1.Add(tc, 0, c)
         self.continCB = chk3 = wx.CheckBox(self, -1, "Continuous")
@@ -534,12 +534,14 @@ class SweepDialog(wx.Dialog):
         LogGUIEvent("Apply")
 ##        p.dataMode = self.dataModeCM.GetValue()
 
+        changed = False
         i = self.RBWPath.GetSelection()
         # JGH added in case the SweepDialog is opened and closed with no action
         if i >= 0:
             msa.RBWSelindex = p.RBWSelindex = i
         # JGH end
         (msa.finalfreq, msa.finalbw) = p.RBWFilters[p.RBWSelindex]
+        changed |= p.rbw != msa.finalbw
         p.rbw = msa.finalbw # JGH added
         p.switchRBW = p.RBWSelindex
 
@@ -574,7 +576,11 @@ class SweepDialog(wx.Dialog):
             p.planeExt += [floatOrEmpty(box.GetValue()) + p.planeExt[0] \
                            for box in self.planeExt2G3GBox]
         p.isCentSpan = self.centSpanRB.GetValue()
-        p.nSteps = int(self.stepsTB.GetValue())
+
+        tmp = int(self.stepsTB.GetValue())
+        changed |= p.nSteps != tmp
+        p.nSteps = tmp
+
         p.continuous = self.continCB.GetValue()
 
         if self.autoWaitCB.GetValue() == True:   # JGH 11/27/13
@@ -589,17 +595,27 @@ class SweepDialog(wx.Dialog):
             p.wait = 0
             self.waitTB.SetValue(str(p.wait))
 
-        p.isLogF = self.logRB.GetValue()
+        tmp = self.logRB.GetValue()
+        changed |= p.isLogF != tmp
+        p.isLogF = tmp
+
         self.AdjFreqTextBoxes(final=True)
-        p.fStart = floatOrEmpty(self.startBox.GetValue())
-        p.fStop = floatOrEmpty(self.stopBox.GetValue())
+        tmp = floatOrEmpty(self.startBox.GetValue())
+        changed |= p.fStart != tmp
+
+        p.fStart = tmp
+        tmp = floatOrEmpty(self.stopBox.GetValue())
+        changed |= p.fStop != tmp
+        p.fStop = tmp
 
         if self.lrRB.GetValue():
-            p.sweepDir = 0
+            tmp = 0
         elif self.rlRB.GetValue():
-            p.sweepDir = 1
+            tmp = 1
         else:
-            p.sweepDir = 2
+            tmp = 2
+        changed |= p.sweepDir != tmp
+        p.sweepDir = tmp
 
         if msa.mode == MSA.MODE_VNARefl:
             graphR = float(self.graphRBox.GetValue())
@@ -616,14 +632,17 @@ class SweepDialog(wx.Dialog):
         frame.StopScanAndWait()
 
         msa.NewScanSettings(p)
-        frame.spectrum = None
-        specP.results = None
+        if changed:
+            frame.spectrum = None
+            specP.results = None
 
         LogGUIEvent("Apply: new spectrum")
         frame.ReadCalPath()
         frame.ReadCalFreq()
-        frame.ScanPrecheck(scan=False)
-        msa.scanResults.put((0, 0, 0, 0, 0, 0, 0, 0, 0))
+        if changed:
+            frame.ScanPrecheck(scan=False)
+            msa.scanResults.put((0, 0, 0, 0, 0, 0, 0, 0, 0))
+            frame.needRestart = True
         return True
 
     #--------------------------------------------------------------------------

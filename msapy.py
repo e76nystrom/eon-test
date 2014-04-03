@@ -36,7 +36,7 @@ version = "2.7.P3 (2/2/14)"
 version = "2.7.P106 (2/3/14)"
 version = "P108JGH_F (2/24/14)"
 version = "P109GEORGE (2/25/14)"
-version = "1.01 (3/10/14)"
+version = "1.01 (4/01/14)"
 
 # This is the source for the MSAPy application. It's composed of two parts:
 #
@@ -148,6 +148,7 @@ class MSASpectrumFrame(wx.Frame):
         self.markMHz = 0.
         self.fHdim = fHdim = 800 ; self.fVdim = fVdim = 600 # JGH 2/16/14
         #fHdim = 800 ; fVdim = 600
+        title = "Modular Spectrum Analyzer"
         wx.Frame.__init__(self, parent, -1, title,
                             size=p.get("frameSize", (fHdim, fVdim)))
         self.Bind(wx.EVT_SIZE, self.OnSizeChanged)
@@ -428,15 +429,16 @@ class MSASpectrumFrame(wx.Frame):
         self.screenWidth, self.screenHeight = wx.Display().GetGeometry()[2:4]
 
         # restore markers from preferences
-        for attr, value in p.__dict__.items():
-            if len(attr) > 9 and attr[:8] == "markers_":
-                mm, mName, mAttr = string.split(attr, "_")
-                mName = re.sub("p", "+", re.sub("m", "-", mName))
-                m = specP.markers.get(mName)
-                if not m:
-                    specP.markers[mName] = m = Marker(mName, "", 0)
-                setattr(m, mAttr, value)
-                delattr(p, attr)
+        if False:
+            for attr, value in p.__dict__.items():
+                if len(attr) > 9 and attr[:8] == "markers_":
+                    mm, mName, mAttr = string.split(attr, "_")
+                    mName = re.sub("p", "+", re.sub("m", "-", mName))
+                    m = specP.markers.get(mName)
+                    if not m:
+                        specP.markers[mName] = m = Marker(mName, "", 0)
+                    setattr(m, mAttr, value)
+                    delattr(p, attr)
 
         # put a checkmark by the current mode in the Mode menu
         for i, item in enumerate(self.modeMenu.GetMenuItems()):
