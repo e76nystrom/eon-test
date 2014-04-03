@@ -39,7 +39,7 @@ if sys.platform == "darwin":
         )),
         data_files=[("../Frameworks",
             ["/opt/local/lib/libusb-legacy/libusb-legacy-0.1.4.dylib",
-             "/opt/local/lib/libusb-1.0.dylib"])]
+             "/usr/local/lib/libusb-1.0.dylib"])]
     )
 elif sys.platform != "win32":
     extra_options = dict(
