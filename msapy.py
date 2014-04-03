@@ -83,6 +83,7 @@ from marker import Marker
 from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
+import twoPort   # Added by JGH 3/29/14
 
 SetModuleVersion("msapy",("1.10","JGH.e","03/24/2014"))
 SetVersion(version)
@@ -102,26 +103,26 @@ print ("PROGRAM STARTED")
 #==============================================================================
 # Parallel port I/O interface.
 
-if isWin and winUsesParallelPort: # THIS LINE IS ALWAYS FALSE AND THAT'S OK
-    # Windows DLL for accessing parallel port
-    from ctypes import windll
-    try:
-        windll.LoadLibrary(os.path.join(resdir, "inpout32.dll"))
-    except WindowsError:
-        # Start up an application just to show error dialog
-        app = wx.App(redirect=False)
-        app.MainLoop()
-        dlg = ScrolledMessageDialog(None,
-                        "\n  inpout32.dll not found", "Error")
-        dlg.ShowModal()
-        sys.exit(-1)
-else:
-    if isMac:
-        # OSX: tell ctypes that the libusb backend is located in the Frameworks directory
-        fwdir = os.path.normpath(resdir + "/../Frameworks")
-        print ("fwdir :    " + str(fwdir))
-        if os.path.exists(fwdir):
-            os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = fwdir
+##if isWin and winUsesParallelPort: # THIS LINE IS ALWAYS FALSE AND THAT'S OK
+##    # Windows DLL for accessing parallel port
+##    from ctypes import windll
+##    try:
+##        windll.LoadLibrary(os.path.join(resdir, "inpout32.dll"))
+##    except WindowsError:
+##        # Start up an application just to show error dialog
+##        app = wx.App(redirect=False)
+##        app.MainLoop()
+##        dlg = ScrolledMessageDialog(None,
+##                        "\n  inpout32.dll not found", "Error")
+##        dlg.ShowModal()
+##        sys.exit(-1)
+##else:
+##    if isMac:
+##        # OSX: tell ctypes that the libusb backend is located in the Frameworks directory
+##        fwdir = os.path.normpath(resdir + "/../Frameworks")
+##        print ("fwdir :    " + str(fwdir))
+##        if os.path.exists(fwdir):
+##            os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = fwdir
 
 #******************************************************************************
 #****                          MSA GUI Front End                          *****
@@ -238,9 +239,9 @@ class MSASpectrumFrame(wx.Frame):
             ("Reference To Baseline",   "SetCalRef_Base", -2),
             ("No Reference",            "SetCalRef_None", -2),
         ))
-#        self.twoPortMenu = self.CreateMenu("&Two Port", (
-#            ("Show Two Port Window...\tCTRL-P", "TwoPortShow", -5),
-#        ))
+        self.twoPortMenu = self.CreateMenu("&Two Port", (
+            ("Show Two Port Window...\tCTRL-P", "TwoPortShow", -1),
+        ))
         self.modeMenu = self.CreateMenu("&Mode", (
             ("Spectrum Analyzer",       "SetMode_SA", -2),
             ("Spectrum Analyzer with TG", "SetMode_SATG", -2),
@@ -381,6 +382,7 @@ class MSASpectrumFrame(wx.Frame):
         p.get("switchPulse", 0) # JGH added Oct23
         p.get("syntData", False)
         p.get("rbwP4", False) # RBW may use P4 (new, True) or P1 (classic, False)
+        p.get("winLPT", False)
 
         # initialize spectrum graph
         p.get("fStart", -1.5)
@@ -516,7 +518,7 @@ class MSASpectrumFrame(wx.Frame):
 
     def CreateMenu(self, menuName, menuArray):
         if 0 or debug:
-            print("msapy>516< barName:", menuName, "menuArray:", menuArray, "Length:", len(menuArray))
+            print("msapy>516< menuName:", menuName, "menuArray:", menuArray, "Length:", len(menuArray))
         menu = wx.Menu()
         s = 0
         submenu = None
@@ -1010,7 +1012,13 @@ class MSASpectrumFrame(wx.Frame):
         self.StopScanAndWait()
         from configDialog import ConfigDialog
         dlg = ConfigDialog(self)
-        dlg.ShowModal()
+        if dlg.ShowModal() == wx.ID_OK:
+            dlg.GetHardwareSet()
+        dlg.Close() # Do not Destroy() or variables will be lost
+        p = self.prefs
+        print("msapy>1020< rbwP4:", p.rbwP4)
+        print("msapy>1021< LO1.appxdds:", p.appxdds1)
+        print("msapy>1022< isWin, winLPT:", isWin, p.winLPT)
 
     #--------------------------------------------------------------------------
     # Open the Calibration File Manager dialog box.
@@ -1282,7 +1290,7 @@ class MSASpectrumFrame(wx.Frame):
             bmtype = wx.BITMAP_TYPE_JPEG    # JGH 2/10/14
         elif ext == ".bmp":
             bmtype = wx.BITMAP_TYPE_BMP # JGH 2/10/14
-        print ("Saving image to", path)
+        print ("msapy>1282< Saving image to", path)
         bitmap.SaveFile(path, bmtype)   # JGH 2/10/14
 
     #--------------------------------------------------------------------------
@@ -1335,8 +1343,8 @@ class MSASpectrumFrame(wx.Frame):
             if ShouldntOverwrite(path, self):
                 continue
             break
-        if debug:
-            print ("Saving data to", path)
+        if 0 or debug:
+            print ("msapy>1336< Saving data to", path)
         if data == self.spectrum:
             writer(path, self.prefs)
         else:
@@ -1564,8 +1572,8 @@ class MSASpectrumFrame(wx.Frame):
 
     def ReadCalPath(self):
         global msa
-        if debug:
-            print ("10,665 Reading path calibration")
+        if 0 or debug:
+            print ("msapy>1565< Reading path calibration")
         self.StopScanAndWait()
         p = self.prefs
         directory, fileName = CalFileName(p.RBWSelindex+1)
@@ -1573,30 +1581,30 @@ class MSASpectrumFrame(wx.Frame):
             f = open(os.path.join(directory, fileName), "Ur")
             msa.magTableADC, msa.magTableDBm, msa.magTablePhase = \
                     CalParseMagFile(f)
-            if debug:
+            if 0 or debug:
                 print (fileName, "read OK.")
         except:
             ##traceback.print_exc()
-            if debug:
-                print (fileName, "not found. Using defaults.")
+            if 0 or debug:
+                print ("msapy>1578<", fileName, "not found. Using defaults.")
 
     #--------------------------------------------------------------------------
     # Read CalFreq file for mag frequency-dependent adjustment.
 
     def ReadCalFreq(self):
         global msa
-        if debug:
-            print ("Reading frequency calibration")
+        if 0 or debug:
+            print ("msapy>1586< Reading frequency calibration")
         self.StopScanAndWait()
         directory, fileName = CalFileName(0)
         try:
             f = open(os.path.join(directory, fileName), "Ur")
             msa.freqTableMHz, msa.freqTableDB = CalParseFreqFile(f)
-            if debug:
+            if 0 or debug:
                 print (fileName, "read OK.")
         except:
             ##traceback.print_exc()
-            if debug:
+            if 0 or debug:
                 print (fileName, "not found. Using defaults.")
 
     #--------------------------------------------------------------------------
@@ -1702,8 +1710,8 @@ class MSASpectrumFrame(wx.Frame):
 
         self.InitMode(mode)
 
-        if debug:
-            print ("Changed MSA mode to", msa.modeNames[mode])
+        if 0 or debug:
+            print ("msapy>1696< Changed MSA mode to", msa.modeNames[mode])
         self.prefs.mode = mode
         msa.SetMode(mode)
         if self.specP:
@@ -1765,11 +1773,28 @@ class MSASpectrumFrame(wx.Frame):
             i = menuBar.FindMenu("Operating Cal")
             if i > 0:
                 menuBar.Remove(i)
+            i = menuBar.FindMenu("Two Port")
+            if i > 0:
+                menuBar.Remove(i)
         else:
             if menuBar.FindMenu("Operating Cal") < 0:
                 i = menuBar.FindMenu("Mode")
                 if i > 0:
                     menuBar.Insert(i,self.operatingCalMenu,"Operating Cal")
+            if menuBar.FindMenu("Two Port") < 0:
+                i = menuBar.FindMenu("Mode")
+                if i > 0:
+                    menuBar.Insert(i,self.twoPortMenu,"Two Port")
+
+    #--------------------------------------------------------------------------
+    # Open the Two Port  dialog box. TENTAVIVE : JGH 3/29/14
+
+    def TwoPortShow(self, event): # Added by JGH 3/29/14
+        
+        self.StopScanAndWait()
+        from twoPort import TransferParams
+        dlg = TransferParams(self)
+        dlg.Show()
 
     #--------------------------------------------------------------------------
     # Handle a resize event of the main frame or log pane sash.
@@ -1802,7 +1827,8 @@ class MSASpectrumFrame(wx.Frame):
 
     def logPhide(self, event):
         p = self.prefs
-        print("logSplit on hide: ", p.logSplit)
+        if 0 or debug:
+            print("msapy>1808< logSplit on hide: ", p.logSplit)
         self.logSplitter.SetSashPosition(self.fVdim)
         self.logP.Hide()
         p.logP = 1
@@ -1840,7 +1866,6 @@ class MSASpectrumFrame(wx.Frame):
             msa.syndut.Close()
         if self.smithDlg:
             self.smithDlg.Close()
-        print ("Exiting")
         self.SavePrefs()
         print ("Exiting2")
         self.Destroy()
@@ -1860,6 +1885,6 @@ class MSAApp(wx.App):
         return True
 
     def ProcessEvent(self, event):
-        if debug:
+        if 0 or debug:
             print ("ProcessEvent")
         event.Skip()

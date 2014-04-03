@@ -33,7 +33,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.02","JGH.f","03/24/2014"))
+SetModuleVersion("msa",("JGH-q", "03/31/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -654,7 +654,7 @@ class MSA:
                 if doPhase and not bypassPDM and \
                         (self._phasedata < 13107 or self._phasedata > 52429):
                     oldPhase = self._phasedata
-                    self.invPhase ^= 1
+                    self.invPhase ^= 1 
                     self._CommandPhaseOnly()
                     if 0:
                         self.LogEvent("CaptureOneStep phase delay")
@@ -967,7 +967,7 @@ class MSA:
         global cb
         p = self.frame.prefs
         SweepArray = [] # aka GEORGE
-        VarsArray = []  # VarsArray size = VariableList size  # aka MARTHA
+        VarsArray = []  # VarsArray size = VariableList size
         StepArray = []  # StepArray size = Number of steps # aka BIG BERTHA
 
         for f in self._freqs:
@@ -1058,7 +1058,7 @@ class MSA:
                 
             SweepArray.append(byteList)
 
-            # MARTHA: array containg all parameters for ONE step
+            # Build an VarsArray containg all parameters for ONE step
 
 ##            The RealFinalIF as defined in LB is:
 ##            LO2 - (PLL1array(thisstep,45)*DDS1array(thisstep,46)/rcounter1) + \
@@ -1081,7 +1081,8 @@ class MSA:
                          LO3.Acounter,  LO3.fcounter, LO3.rcounter, \
                          RealFinalIF, self.masterclock]
 
-            # BIG BERTHA: array containing parameters for ALL steps, used to Show Variables
+            # The StepArray (aka BIG BERTHAI contains the parameters for ALL steps
+            # It used to Show Variables
             StepArray.append(VarsArray)
 
         if 0 or debug:

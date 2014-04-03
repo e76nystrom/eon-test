@@ -205,7 +205,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         sizerG1.Add(btn, (16,1), flag=c)
         btn = wx.Button(self, wx.ID_OK)
         btn.SetDefault()    # JGH 3/15/13
-        btn.Bind(wx.EVT_BUTTON, self.OnOk)
+##        btn.Bind(wx.EVT_BUTTON, self.OnOk)
         sizerG1.Add(btn, (16,2), flag=c)
 
         sizerH0.Add(sizerG1, 0, wx.ALL, 10)
@@ -295,7 +295,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
 
         self.syntDataCB = chk1 = wx.CheckBox(self, -1, "Use Synthetic Data")
         self.syntDataCB.SetValue(p.get("syntData", False))
-        print("syntData: ", self.syntDataCB.GetValue())
+        print("configDialog>298< syntData: ", self.syntDataCB.GetValue())
         sizerG2B.Add(chk1, (0,2), flag=cv)        
 
         sizerG2B.Add(wx.StaticText(self, -1,  "Interface" ), (1, 0), flag=cvl)
@@ -307,11 +307,12 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
             CBoptions = CBoptions[1:4]
             s = p.get("CBoptions",CBoptions[0])
         self.CBoptCM = cm = wx.ComboBox(self, -1, s, (1, 1), cwsz, choices=CBoptions, style=wx.CB_READONLY)
+        print("configDialog>310< CBopt: ", self.CBoptCM.GetValue())
         sizerG2B.Add(cm, (1,1), flag=cv)
 
         self.rbwP4CB = chk2 = wx.CheckBox(self, -1, "Use RBW in P4")
         self.rbwP4CB.SetValue(p.get("rbwP4", False))
-        print("rbwP4: ", self.rbwP4CB.GetValue())
+        print("configDialog>315< rbwP4: ", self.rbwP4CB.GetValue())
         sizerG2B.Add(chk2, (1,2), flag=cv)
         
         sizerV2C.Add(sizerG2B, 0, wx.ALL, 5)
@@ -330,7 +331,11 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         if pos == wx.DefaultPosition:
             self.Center()
 
-    def OnOk(self, event): # JGH This method heavily modified 1/20/14
+##        if dlg.ShowModal() == wx.ID_OK:
+##            GetHardwareSet()
+
+##    def OnOk(self, event): # JGH This method heavily modified 1/20/14
+    def GetHardwareSet(self):
         global msa
         p = self.prefs
         # JGH modified 2/2/14
@@ -386,7 +391,8 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
             msa.syndut.Destroy()
             msa.syndut = None
                       
-        p.CBopt = CBopt = self.CBoptCM.GetValue()
+        CBopt = self.CBoptCM.GetValue()
+        print("CBopt:", CBopt)
         if CBopt == "LPT": # JGH Only Windows does this
             p.winLPT = winUsesParallelPort = True
             # Windows DLL for accessing parallel port
@@ -406,6 +412,12 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
                 sys.exit(-1)
 
         elif CBopt == "USB": # JGH Windows, Linux and OSX do this
+            if isMac:
+                # OSX: tell ctypes that the libusb backend is located in the Frameworks directory
+                fwdir = os.path.normpath(resdir + "/../Frameworks")
+                print ("fwdir :    " + str(fwdir))
+                if os.path.exists(fwdir):
+                    os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = fwdir            
             from msa_cb_usb import MSA_CB_USB
             cb = MSA_CB_USB()
             SetCb(cb)
@@ -417,11 +429,9 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
             from msa_cb import MSA_BBB
             cb = MSA_BBB()
             SetCb(cb)
-        else:
-            pass
-
+        
         p.rbwP4 = self.rbwP4CB.GetValue()   # JGH 3/18/14
-
+        print("configDialog>434< rbwP4: ", self.rbwP4CB.GetValue())
         # JGH end of additions
 
         p.configWinPos = self.GetPosition().Get()
@@ -431,8 +441,8 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         GetLO3().ddsfilbw = p.dds3filbw = float(self.dds3BWBox.GetValue())
         msa.masterclock = p.masterclock = float(self.mastClkBox.GetValue())
         p.invDeg = float(self.invDegBox.GetValue())
-        
-        self.Close()
+
+##        self.Close() # The dialog is alive and still accesible hidden in memory
 
     #--------------------------------------------------------------------------
     # Module directory
@@ -495,9 +505,9 @@ class ConfigHelpDialog(wx.Dialog):
         sizerV = wx.BoxSizer(wx.VERTICAL)
         self.SetBackgroundColour("WHITE")
         text = "Enter configuration data for your machine. "\
-        "With a standard SLIM build, the items in WHITE likely need no "\
-        "change. CYAN items and Auto Switch checkboxes generally must be "\
-        "customized."
+##        "With a standard SLIM build, the items in WHITE likely need no "\
+##        "change. CYAN items and Auto Switch checkboxes generally must be "\
+##        "customized."
         self.st = st = wx.StaticText(self, -1, text, pos=(10, 10))
 
         st.Wrap(600)
