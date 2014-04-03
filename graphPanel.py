@@ -9,7 +9,7 @@ from msa import MSA
 from marker import Marker
 from util import MHz, ns, si, SI_NO,StdScale
 
-SetModuleVersion("graphPanel",("1.05","EON","03/21/2014"))
+SetModuleVersion("graphPanel",("1.06","EON","04/03/2014"))
 
 #==============================================================================
 # A graph of a set of traces.
@@ -48,6 +48,7 @@ class GraphPanel(wx.Panel):
         self.dbDownBy = 3           # dB down-by level to put L, R markers
         self.isAbs = False          # set if dbDownBy is an absolute level
         self.bind = False # EON Jan 12 2014
+        self.xs = None
 
         wx.Panel.__init__(self, parent, -1)
         self.SetBackgroundColour(p.theme.backColor)
@@ -946,6 +947,8 @@ class GraphPanel(wx.Panel):
     # Returns (trace, mhz, y), or 3 Nones if not found.
 
     def FindNearestTrace(self, x, y):
+        if self.xs == None:
+            return None, None, None
         traces = self.traces
         if len(traces) > 0:
             i = self.xs.searchsorted(x)
