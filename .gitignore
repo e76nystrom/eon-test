@@ -2,7 +2,9 @@
 *.*~
 *.bak
 *.docx
+*.egg
 *.gz
+*.icns
 *.inf
 *.iss
 *.log
@@ -19,7 +21,7 @@
 *~
 /build
 /commit
-/cycfs2prog
+/cycfx2prog
 /cycfx2prog.exe
 /Data
 /dist
@@ -42,3 +44,4 @@
 /zip.sh
 .project
 .pydevproject
+.DS_Store
