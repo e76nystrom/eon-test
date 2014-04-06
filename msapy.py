@@ -358,6 +358,14 @@ class MSASpectrumFrame(wx.Frame):
         print ("Python", sys.version)
         print ("wx", wx.version(), "numpy", numpy.version.version)
 
+        if isMac:
+            path = os.path.abspath(os.path.dirname(sys.argv[0]))
+            m = re.match(".+(Resources)$", path)
+            if m != None:
+                path = path[0:m.start(1)] + "Frameworks"
+                os.environ['DYLD_FALLBACK_LIBRARY_PATH'] = path
+                print ("DYLD_FALLBACK_PATH %s" % path)
+
         global msa
         self.msa = msa = MSA(self) # JGH MSA object is created here 1/25/14
         msaGlobal.SetMsa(msa)
