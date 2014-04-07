@@ -1,3 +1,27 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+###############################################################################
+#
+#                       MODULAR SPECTRUM ANALYZER 
+#
+# The original Python software, written by Scott Forbes, was a complete rewrite
+# of the original Liberty Basic code developed by Scotty Sprowls (the designer
+# of the Spectrum Analyzer) and Sam Weterlin. Over a period of nine months,
+# comencing in May/June, 2013, Scott's code has been expanded and debugged by
+# Jim Hontoria, W1JGH and Eric Nystrom, W1EON in close consultation with Scotty.
+# Other contributors to the testing have been Will Dillon and  Earle Craig.
+#
+# Copyright (c) 2011, 2013 Scott Forbes
+#
+# This file may be distributed and/or modified under the terms of the
+# GNU General Public License version 2 as published by the Free Software
+# Foundation. (See COPYING.GPL for details.)
+#
+# This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
+# WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+#
+###############################################################################
+
 from msaGlobal import appdir, GetLO1, GetLO3, GetModuleInfo, GetMsa, \
     isMac, isWin, resdir, SetCb, SetModuleVersion
 import os, sys
@@ -5,8 +29,8 @@ import wx.grid
 from wx.lib.dialogs import ScrolledMessageDialog
 from util import gstr, mu
 
-SetModuleVersion("configDialog",("1.03","JGH","03/20/2014"))
-# Updated from ("configDialog",("1.02","EON.C","03/16/2014"))
+SetModuleVersion("configDialog",("1.04","JGH","04/06/2014"))
+
 #==============================================================================
 # The MSA/VNA Configuration Manager dialog box (also modal) # JGH
 
@@ -289,31 +313,37 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
 
         sizerG2B.Add(wx.StaticText(self, -1, "ADC type" ), (0, 0), flag=cvl)
         ADCoptions = ["16bit serial", "12bit serial", "12bit ladder"]
-        s = p.get("ADCtype", ADCoptions[0])
-        self.ADCoptCM = cm = wx.ComboBox(self, -1, s, (0, 1), cwsz, style=wx.CB_READONLY)
+        s = p.get("ADCtype", "16bit serial")
+        self.ADCoptCM = cm = wx.ComboBox(self, -1, s, (0, 1), cwsz, choices=ADCoptions, style=wx.CB_READONLY)
         sizerG2B.Add(cm, (0, 1), flag=cv)
 
         self.syntDataCB = chk1 = wx.CheckBox(self, -1, "Use Synthetic Data")
         self.syntDataCB.SetValue(p.get("syntData", False))
-        print("configDialog>298< syntData: ", self.syntDataCB.GetValue())
         sizerG2B.Add(chk1, (0,2), flag=cv)        
 
         sizerG2B.Add(wx.StaticText(self, -1,  "Interface" ), (1, 0), flag=cvl)
+
+##        isWin = True  # JGH: FOR TESTING PURPOSES ONLY
         
         CBoptions = ['LPT', 'USB', 'RPI', 'BBB']
-        if isWin:
-            s = p.get("CBoptions",CBoptions[1])
+        if isWin == True:
+            if p.get("winLPT", False) == False:
+                CBopt = CBoptions[1]
+            else:
+                CBopt= CBoptions[0]
         else:
             CBoptions = CBoptions[1:4]
-            s = p.get("CBoptions",CBoptions[0])
-        self.CBoptCM = cm = wx.ComboBox(self, -1, s, (1, 1), cwsz, choices=CBoptions, style=wx.CB_READONLY)
-        print("configDialog>310< CBopt: ", self.CBoptCM.GetValue())
+            CBopt = p.get("CBopt","USB")
+        self.CBoptCM = cm = wx.ComboBox(self, -1, CBopt, (1, 1), cwsz, choices=CBoptions, style=wx.CB_READONLY)
         sizerG2B.Add(cm, (1,1), flag=cv)
 
         self.rbwP4CB = chk2 = wx.CheckBox(self, -1, "Use RBW in P4")
         self.rbwP4CB.SetValue(p.get("rbwP4", False))
-        print("configDialog>315< rbwP4: ", self.rbwP4CB.GetValue())
         sizerG2B.Add(chk2, (1,2), flag=cv)
+
+        self.mBandCB = chk3 = wx.CheckBox(self, -1, "Use multiband")
+        self.mBandCB.SetValue(p.get("mBand", False))
+        sizerG2B.Add(chk3, (2,2), flag=cv)
         
         sizerV2C.Add(sizerG2B, 0, wx.ALL, 5)
 
@@ -331,11 +361,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         if pos == wx.DefaultPosition:
             self.Center()
 
-##        if dlg.ShowModal() == wx.ID_OK:
-##            GetHardwareSet()
-
-##    def OnOk(self, event): # JGH This method heavily modified 1/20/14
-    def GetHardwareSet(self):
+    def GetHardwareSet(self): # JGH new method
         global msa
         p = self.prefs
         # JGH modified 2/2/14
@@ -383,7 +409,6 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         
         syntData = p.syntData 
         p.syntData = self.syntDataCB.GetValue()
-        print("configDialog>386< syntData: ", self.syntDataCB.GetValue())
         if not syntData and p.syntData:
             from synDUT import SynDUTDialog
             msa.syndut = SynDUTDialog(self.frame)
@@ -391,7 +416,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
             msa.syndut.Destroy()
             msa.syndut = None
                       
-        CBopt = self.CBoptCM.GetValue()
+        p.CBopt = CBopt = self.CBoptCM.GetValue()
         if CBopt == "LPT": # JGH Only Windows does this
             p.winLPT = True
             # Windows DLL for accessing parallel port
@@ -413,6 +438,7 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
                 sys.exit(-1)
 
         elif CBopt == "USB": # JGH Windows, Linux and OSX do this
+            p.winLPT = False
             if isMac:
                 # OSX: tell ctypes that the libusb backend is located in the Frameworks directory
                 fwdir = os.path.normpath(resdir + "/../Frameworks")
@@ -423,15 +449,18 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
             cb = MSA_CB_USB()
             SetCb(cb)
         elif CBopt == "RPI": # JGH RaspberryPi does this
+            p.winLPT = False
             from msa_cb import MSA_RPI
             cb = MSA_RPI()
             SetCb(cb)
         elif CBopt == "BBB": # JGH BeagleBone does this
+            p.winLPT = False
             from msa_cb import MSA_BBB
             cb = MSA_BBB()
             SetCb(cb)
         
         p.rbwP4 = self.rbwP4CB.GetValue()   # JGH 3/18/14
+        p.mBand = self.mBandCB.GetValue()   # JGH 4/5/14
 
         # JGH end of additions
 
@@ -453,15 +482,6 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         if not os.path.exists(directory):
             os.makedirs(directory)
         return directory
-
-    def OnMoveRight(self, event=None):
-        pass
-
-    def OnMoveLeft(self, event=None):
-        pass
-
-    def OnModOK(self, event=None):
-        pass
 
     #--------------------------------------------------------------------------
     # Present Help dialog.

@@ -1,3 +1,27 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+###############################################################################
+#
+#                       MODULAR SPECTRUM ANALYZER 
+#
+# The original Python software, written by Scott Forbes, was a complete rewrite
+# of the original Liberty Basic code developed by Scotty Sprowls (the designer
+# of the Spectrum Analyzer) and Sam Weterlin. Over a period of nine months,
+# comencing in May/June, 2013, Scott's code has been expanded and debugged by
+# Jim Hontoria, W1JGH and Eric Nystrom, W1EON in close consultation with Scotty.
+# Other contributors to the testing have been Will Dillon and  Earle Craig.
+#
+# Copyright (c) 2011, 2013 Scott Forbes
+#
+# This file may be distributed and/or modified under the terms of the
+# GNU General Public License version 2 as published by the Free Software
+# Foundation. (See COPYING.GPL for details.)
+#
+# This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
+# WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+#
+###############################################################################
+
 from msaGlobal import GetMsa, isMac, SetModuleVersion
 import wx
 from msa import MSA
@@ -7,7 +31,7 @@ from util import StartStopToCentSpan, CentSpanToStartStop
 from stepAtten import SetStepAttenuator
 from theme import DarkTheme, LightTheme
 
-SetModuleVersion("sweepDialog",("1.04","JGH","03/14/2014"))
+SetModuleVersion("sweepDialog",("1.05","JGH","04/06/2014"))
 
 debug = False
 
@@ -148,41 +172,54 @@ class SweepDialog(wx.Dialog):
 
         # other sweep parameters
         sizerH3 = wx.BoxSizer(wx.HORIZONTAL)
-        sizerH3V1 = wx.BoxSizer(wx.VERTICAL)
-        sizerH3V1.Add(wx.StaticText(self, -1, "Steps/Sweep"), 0, wx.TOP, 5)
-        sizerH3V1H1 = wx.BoxSizer(wx.HORIZONTAL)
-        self.stepsTB = tc = wx.TextCtrl(self, -1, str(p.nSteps), size=(50, -1))
+        sweepBoxTitle = wx.StaticBox(self, -1, "Steps, Wait and Filtering")
+        sweepSizer = wx.StaticBoxSizer(sweepBoxTitle, wx.VERTICAL)
+##        sweepH1Sizer = wx.BoxSizer(wx.HORIZONTAL)
+##        sizerH3V1 = wx.BoxSizer(wx.VERTICAL)
+        sizerGBS1 = wx.GridBagSizer(hgap=0, vgap=0)
+        
+        vc = wx.ALIGN_CENTER_VERTICAL
+        
+        self.stepsTB = tc = wx.TextCtrl(self, -1, str(p.nSteps), size=(45, -1))
         #self.Bind(wx.EVT_TEXT, self.setStepsTB, tc)
         tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
-        sizerH3V1H1.Add(tc, 0, c)
+        sizerGBS1.Add(tc, (0,0))
+        sizerGBS1.Add(wx.StaticText(self, -1, " Steps "), (0,1), flag=vc)
         self.continCB = chk3 = wx.CheckBox(self, -1, "Continuous")
-        sizerH3V1H1.Add(chk3, 0, c|wx.LEFT, 10)
-        sizerH3V1.Add(sizerH3V1H1, 0, 0)
-
-        sizerH3V1.Add(wx.StaticText(self, -1, "Wait (ms)"), 0, wx.TOP, 2)
-        sizerH3V1H2 = wx.BoxSizer(wx.HORIZONTAL)
-        self.waitTB = tc = wx.TextCtrl(self, -1, str(p.wait), size=(50, -1))
-        self.Bind(wx.EVT_TEXT, self.setWaitTB, tc)
+        sizerGBS1.Add(chk3, (0,2), span=(1,2), flag=vc)
+  
+        sizerGBS1.Add(wx.StaticText(self, -1, "Wait"), (1,0))
+        
+        self.waitTB = tc = wx.TextCtrl(self, -1, str(p.wait), size=(45, -1))
+        tc.Bind(wx.EVT_TEXT, self.setWaitTB)
         tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
-        sizerH3V1H2.Add(tc, 0, c)
+        sizerGBS1.Add(tc, (2,0))
+        sizerGBS1.Add(wx.StaticText(self, -1, " ms"), (2,1), flag=vc)
         self.autoWaitCB = chk4 = wx.CheckBox(self, -1, "Auto Wait")
+        chk4.SetValue(p.get("waitAuto", False))
         chk4.Bind(wx.EVT_CHECKBOX, self.configAutoWait)
-        sizerH3V1H2.Add(chk4, 0, c|wx.LEFT, 10)
-        sizerH3V1.Add(sizerH3V1H2, 0, wx.ALIGN_LEFT, 0)
-
-        # Video Filters
-        sizerH3V1.Add(wx.StaticText(self, -1, "Video Filters"), 0, wx.TOP, 2)
-        # samples = ["Wide", "Medium", "Narrow", "XNarrow"]
+        sizerGBS1.Add(chk4, (2,2), span=(1,2), flag=vc)
+        
+        sizerGBS1.Add(wx.StaticText(self, -1, "RCtc"), pos=(3,0))
+        sizerGBS1.Add(wx.StaticText(self, -1, " V. Filters"), pos=(3,2), span=(1,2))
+        
+        self.tcfTB = tc = wx.TextCtrl(self, -1, str(p.waitTCF), size=(45, -1))
+        self.Bind(wx.EVT_TEXT, self.setWaitTCF, tc)
+        tc.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
+        sizerGBS1.Add(tc, pos=(4,0))
+        sizerGBS1.Add(wx.StaticText(self, -1, " X"), pos=(4,1), flag=vc)
+        # Video Filters samples = ["Wide", "Medium", "Narrow", "XNarrow"]
         samples = msa.vFilterNames
         self.videoFilt = cm2 = wx.ComboBox(self, -1, samples[2], (0, 0), (100, -1), samples)
         cm2.SetSelection(p.vFilterSelindex)
         self.Bind(wx.EVT_COMBOBOX, self.calculateWait, cm2)
-        sizerH3V1.Add(cm2, 0, wx.ALIGN_LEFT, 0)
-
-        sizerH3.Add(sizerH3V1, 0, 0)
+        sizerGBS1.Add(cm2, pos=(4,2), span=(1,2))
+        
+        sweepSizer.Add(sizerGBS1, 0, 0)
+        sizerH3.Add(sweepSizer, 0, 0)
 
         sizerH3V2 = wx.BoxSizer(wx.VERTICAL) # JGH 11/25/2013
-        sweepBoxTitle = wx.StaticBox(self, -1, "Sweep")
+        sweepBoxTitle = wx.StaticBox(self, -1, "Type and Direction")
         sweepSizer = wx.StaticBoxSizer(sweepBoxTitle, wx.VERTICAL)
         sweepH1Sizer = wx.BoxSizer(wx.HORIZONTAL)
         rb = wx.RadioButton(self, -1, "Linear", style= wx.RB_GROUP)
@@ -198,7 +235,7 @@ class SweepDialog(wx.Dialog):
         sweepH2Sizer.Add(rb, 0, wx.RIGHT, 10)
         self.rlRB = rb = wx.RadioButton(self, -1, "R-L")
         sweepH2Sizer.Add(rb, 0, wx.RIGHT, 10)
-        self.alternateRB = rb = wx.RadioButton(self, -1, "Alternate")
+        self.altRB = rb = wx.RadioButton(self, -1, "Alternate")
         sweepH2Sizer.Add(rb, 0, 0)
         sweepSizer.Add(sweepH2Sizer, 0, wx.TOP, 3)
         sizerH3V2.Add(sweepSizer, 0, wx.LEFT|wx.TOP, 10) # JGH 11/25/2013
@@ -222,7 +259,7 @@ class SweepDialog(wx.Dialog):
 
         sizerH3.Add(sizerH3V2, 0, 0) # JGH 11/25/2013
         sizerV3.Add(sizerH3, 0, 0)
-        self.sizerH3V1 = sizerH3V1
+##        self.sizerH3V1 = sizerH3V1
         self.sizerH3V2 = sizerH3V2
 
         # Apply, Cancel, and OK buttons
@@ -330,7 +367,7 @@ class SweepDialog(wx.Dialog):
                 chk.SetValue(p.get("normRev", 0))
                 sizerVM.Add(chk, 0, ch|wx.BOTTOM, 4)
                 sizerH = wx.BoxSizer(wx.HORIZONTAL)
-                sizerH.Add(wx.StaticText(self, -1, "Offset"), 0, c|wx.RIGHT, 2)
+                sizerH.Add(wx.StaticText(self, -1, "Offset "), 0, c|wx.RIGHT, 2)
                 tc = wx.TextCtrl(self, -1, str(p.tgOffset), size=(40, -1))
                 self.tgOffsetBox = tc
                 sizerH.Add(tc, 0, 0)
@@ -410,7 +447,7 @@ class SweepDialog(wx.Dialog):
         sweepDir = p.get("sweepDir", 0)
         self.lrRB.SetValue(sweepDir == 0)
         self.rlRB.SetValue(sweepDir == 1)
-        self.alternateRB.SetValue(sweepDir == 2)
+        self.altRB.SetValue(sweepDir == 2)
 
         self.AdjFreqTextBoxes(final=True)
         self.sizerH.Fit(self)
@@ -426,26 +463,42 @@ class SweepDialog(wx.Dialog):
     def setWaitTB(self, event=None):
         p = self.frame.prefs
         p.wait = int(self.waitTB.GetValue())
-        
+
+     #--------------------------------------------------------------------------
+
+    def setWaitTCF(self, event=None):
+        p = self.frame.prefs
+        p.waitTCF = int(self.waitTB.GetValue())
+       
     #--------------------------------------------------------------------------    
 
     def configAutoWait(self, event):  # JGH added this method
         p = self.frame.prefs
         if self.autoWaitCB.GetValue() == True:
+            p.waitAuto = True
             self.calculateWait()
         else:
+            p.waitAuto = False
             self.waitTB.ChangeValue(str(p.wait))
         
         #--------------------------------------------------------------------------
 
-    def calculateWait(self, event=None):    # JGH added this  method
-        # Set the wait time to 10 x time constant of video filter
-        # With R=10K and C in uF, RC = C/100 secs and wait=C/10 secs = 100C msecs
+    def calculateWait(self, event=None):    # JGH added this  method. Updated 4/6/14
+        # Set the wait time to waitTCF x time constant of video filter.(Default waitTCF =10)
+        # For resistor values are 10k and 2k7 for mag and phase respectively
+        # Phase is the controlling factor for wait time.
+        # For Magnitude, with R=10K and C in uF, tc = 10C ms
+        # For Phase, with R=2K7 and C in uF, tc = 2.7C ms, we will use tc = 3C ms
+        p = self.frame.prefs
+        waitTCF = int(p.get("waitTCF", 10)) # We set the time constant factor at this value
         p = self.frame.prefs
         C = float(p.vFilterCaps[self.videoFilt.GetSelection()])
-        p.wait = int(100 * C) # msecs
+        p.wait = (3 * waitTCF) * int(1000 * C) / 1000 # milliseconds
         if self.autoWaitCB.GetValue() == True:
+            p.waitAuto = True
             self.waitTB.ChangeValue(str(p.wait))
+        else:
+            p.waitAuto = False
 
         #--------------------------------------------------------------------------
 
@@ -584,16 +637,19 @@ class SweepDialog(wx.Dialog):
         p.continuous = self.continCB.GetValue()
 
         if self.autoWaitCB.GetValue() == True:   # JGH 11/27/13
+            p.waitAuto = True
             self.calculateWait()
             self.waitTB.SetValue(str(p.wait))
-            if debug:
-                print ("waitBox: ", self.waitBox.GetValue())
+            p.wait = int(self.waitTB.GetValue())
         else:
+            p.waitAuto = False
             p.wait = int(self.waitTB.GetValue())
 
         if p.wait < 0:
             p.wait = 0
-            self.waitTB.SetValue(str(p.wait))
+            self.waitTB.SetValue(int(p.wait))
+
+        p.waitTCF = self.tcfTB.GetValue()
 
         tmp = self.logRB.GetValue()
         changed |= p.isLogF != tmp
@@ -643,7 +699,8 @@ class SweepDialog(wx.Dialog):
             frame.ScanPrecheck(scan=False)
             msa.scanResults.put((0, 0, 0, 0, 0, 0, 0, 0, 0))
             frame.needRestart = True
-        return True
+
+        return True, p
 
     #--------------------------------------------------------------------------
     # Close pressed- save parameters back in prefs and close window.

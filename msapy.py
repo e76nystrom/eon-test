@@ -37,7 +37,7 @@ version = "2.7.P106 (2/3/14)"
 version = "P108JGH_F (2/24/14)"
 version = "P109GEORGE (2/25/14)"
 version = "1.01 (4/01/14)"
-
+version = "1.12 (4/06/14)"
 # This is the source for the MSAPy application. It's composed of two parts:
 #
 # Hardware Back End
@@ -52,14 +52,7 @@ version = "1.01 (4/01/14)"
 # The code is mostly a set of object-oriented classes, arranged starting with
 # the most primitive; a search from the top will usually locate an item's
 # definition. A search for "#=" will find the class definitions.
-#
-#
-# TODO:
-#   Reflection calibration.
-#   More than 2 scales.
-#   First scans of R-L scan mode disappear or go out-of-bounds
-#   An "extrapolate ends" of cal table.
-#   A "save" button in cal.
+###############################################################################
 
 import sys
 print ("Python:", sys.version) # Requires python v2.7
@@ -101,28 +94,6 @@ SetFontSize(fontSize)
 print ("PROGRAM STARTED")
 
 #==============================================================================
-# Parallel port I/O interface.
-
-##if isWin and p.winLPT: # THIS LINE IS ALWAYS FALSE AND THAT'S OK
-##    # Windows DLL for accessing parallel port
-##    from ctypes import windll
-##    try:
-##        windll.LoadLibrary(os.path.join(resdir, "inpout32.dll"))
-##    except WindowsError:
-##        # Start up an application just to show error dialog
-##        app = wx.App(redirect=False)
-##        app.MainLoop()
-##        dlg = ScrolledMessageDialog(None,
-##                        "\n  inpout32.dll not found", "Error")
-##        dlg.ShowModal()
-##        sys.exit(-1)
-##else:
-##    if isMac:
-##        # OSX: tell ctypes that the libusb backend is located in the Frameworks directory
-##        fwdir = os.path.normpath(resdir + "/../Frameworks")
-##        print ("fwdir :    " + str(fwdir))
-##        if os.path.exists(fwdir):
-##            os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = fwdir
 
 #******************************************************************************
 #****                          MSA GUI Front End                          *****
@@ -374,6 +345,8 @@ class MSASpectrumFrame(wx.Frame):
         # initialize back end
         p.get("rbw", 300)
         p.get("wait", 10)
+        p.get("waitTCF", 10)
+        p.get("waitAuto", False)
         p.get("sigGenFreq", 10.)
         p.get("tgOffset", 0.)
         p.get("planeExt", 3*[0.])
@@ -391,6 +364,7 @@ class MSASpectrumFrame(wx.Frame):
         p.get("syntData", False)
         p.get("rbwP4", False) # RBW may use P4 (new, True) or P1 (classic, False)
         p.get("winLPT", False) # True when Windows uses parallel port
+        p.get("mBand", False) # True if using multiband
 
         # initialize spectrum graph
         p.get("fStart", -1.5)
@@ -526,7 +500,7 @@ class MSASpectrumFrame(wx.Frame):
 
     def CreateMenu(self, menuName, menuArray):
         if 0 or debug:
-            print("msapy>516< menuName:", menuName, "menuArray:", menuArray, "Length:", len(menuArray))
+            print("msapy>496< menuName:", menuName, "menuArray:", menuArray, "Length:", len(menuArray))
         menu = wx.Menu()
         s = 0
         submenu = None
@@ -556,7 +530,7 @@ class MSASpectrumFrame(wx.Frame):
                             menu.AppendMenu(menuId, subName, submenu)
                 elif menuId > 0 and menuId < 10:
                     if 0 or debug:
-                        print("msapy>546< Next " + str(menuId) + " items are part of a submenu")
+                        print("msapy>526< Next " + str(menuId) + " items are part of a submenu")
                     subName = itemName
                     submenu = wx.Menu()
                     s = menuId
@@ -603,7 +577,7 @@ class MSASpectrumFrame(wx.Frame):
         self.needRestart = False
         if msa.syndut: # JGH 2/8/14 syndutHook5
             if 0 or debug:
-                print ("msapy>593< GETTING SYNTHETIC DATA")
+                print ("msapy>573< GETTING SYNTHETIC DATA")
             msa.syndut.GenSynthInput()
         p = self.prefs
 
@@ -1023,10 +997,8 @@ class MSASpectrumFrame(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             dlg.GetHardwareSet()
         dlg.Close() # Do not Destroy() or variables will be lost
+        self.SavePrefs()
         p = self.prefs
-        print("msapy>1020< rbwP4:", p.rbwP4)
-        print("msapy>1021< LO1.appxdds:", p.appxdds1)
-        print("msapy>1022< isWin, winLPT:", isWin, p.winLPT)
 
     #--------------------------------------------------------------------------
     # Open the Calibration File Manager dialog box.
@@ -1158,7 +1130,7 @@ class MSASpectrumFrame(wx.Frame):
         p = self.prefs
         specP = self.specP
         if 0 or debug:
-            print ("msapy>1142< RefreshAllParms", specP._isReady, self.refreshing)
+            print ("msapy>1126< RefreshAllParms", specP._isReady, self.refreshing)
 
 ##        # checkmark the current marker menu item in the Sweep menu
 ##        items = self.sweepMenu.Markers.GetSubMenu()
@@ -1216,7 +1188,7 @@ class MSASpectrumFrame(wx.Frame):
         else:
             self.sweepDlg.Raise()
         self.sweepDlg.Show(True)
-
+        self.SavePrefs()
     #--------------------------------------------------------------------------
     # Open the Variables modeless info box.
 
@@ -1298,7 +1270,7 @@ class MSASpectrumFrame(wx.Frame):
             bmtype = wx.BITMAP_TYPE_JPEG    # JGH 2/10/14
         elif ext == ".bmp":
             bmtype = wx.BITMAP_TYPE_BMP # JGH 2/10/14
-        print ("msapy>1282< Saving image to", path)
+        print ("msapy>1266< Saving image to", path)
         bitmap.SaveFile(path, bmtype)   # JGH 2/10/14
 
     #--------------------------------------------------------------------------
@@ -1352,7 +1324,7 @@ class MSASpectrumFrame(wx.Frame):
                 continue
             break
         if 0 or debug:
-            print ("msapy>1336< Saving data to", path)
+            print ("msapy>1320< Saving data to", path)
         if data == self.spectrum:
             writer(path, self.prefs)
         else:
@@ -1581,7 +1553,7 @@ class MSASpectrumFrame(wx.Frame):
     def ReadCalPath(self):
         global msa
         if 0 or debug:
-            print ("msapy>1565< Reading path calibration")
+            print ("msapy>1549< Reading path calibration")
         self.StopScanAndWait()
         p = self.prefs
         directory, fileName = CalFileName(p.RBWSelindex+1)
@@ -1594,7 +1566,7 @@ class MSASpectrumFrame(wx.Frame):
         except:
             ##traceback.print_exc()
             if 0 or debug:
-                print ("msapy>1578<", fileName, "not found. Using defaults.")
+                print ("msapy>1562<", fileName, "not found. Using defaults.")
 
     #--------------------------------------------------------------------------
     # Read CalFreq file for mag frequency-dependent adjustment.
@@ -1602,7 +1574,7 @@ class MSASpectrumFrame(wx.Frame):
     def ReadCalFreq(self):
         global msa
         if 0 or debug:
-            print ("msapy>1586< Reading frequency calibration")
+            print ("msapy>1570< Reading frequency calibration")
         self.StopScanAndWait()
         directory, fileName = CalFileName(0)
         try:
@@ -1719,7 +1691,7 @@ class MSASpectrumFrame(wx.Frame):
         self.InitMode(mode)
 
         if 0 or debug:
-            print ("msapy>1696< Changed MSA mode to", msa.modeNames[mode])
+            print ("msapy>1687< Changed MSA mode to", msa.modeNames[mode])
         self.prefs.mode = mode
         msa.SetMode(mode)
         if self.specP:
@@ -1836,7 +1808,7 @@ class MSASpectrumFrame(wx.Frame):
     def logPhide(self, event):
         p = self.prefs
         if 0 or debug:
-            print("msapy>1808< logSplit on hide: ", p.logSplit)
+            print("msapy>1804< logSplit on hide: ", p.logSplit)
         self.logSplitter.SetSashPosition(self.fVdim)
         self.logP.Hide()
         p.logP = 1
