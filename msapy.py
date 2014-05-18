@@ -183,7 +183,7 @@ class MSASpectrumFrame(wx.Frame):
         self.dataMenu = self.CreateMenu("&Data", (
             ("Save Graph Data",         "SaveGraphData", -1),
             ("Save Input Data",         "SaveInputData", -1),
-            ("Save Intstalled Line Cal", "SaveInstalledLineCal", -1),
+            ("Save Installed Line Cal", "SaveInstalledLineCal", -1),
             ("-",                       None, -1),
             ("Dump Events",             "DumpEvents", -1),
             ("Save Debug Events",       "WriteEvents", -1),
@@ -752,7 +752,7 @@ class MSASpectrumFrame(wx.Frame):
     #--------------------------------------------------------------------------
     # Restart/Halt button pressed.
 
-    def OnRestartOrHalt(self, event):
+    def OnRestartOrHalt(self, event=None):
         global msa
         LogGUIEvent("OnRestartOrHalt: scanning=%d step=%d" % \
             (msa.IsScanning(), msa.GetStep()))
@@ -1099,14 +1099,22 @@ class MSASpectrumFrame(wx.Frame):
         self.specP.markers = {}
         self.specP.FullRefresh()
 
-    def ExpandLR(self, event=None):
+    def ExpandLR(self, event=None, start=0, stop=0, steps=0):
         specP = self.specP
         p = self.prefs
-        left = specP.markers.get("L")
-        right = specP.markers.get("R")
-        if left and right:
-            p.fStart = left.mhz
-            p.fStop = right.mhz
+        if start == 0:
+            left = specP.markers.get("L")
+            if left:
+                start = left.mhz
+        if stop == 0:
+            right = specP.markers.get("R")
+            if right:
+                stop = right.mhz
+        if start != 0 and stop != 0:
+            p.fStart = start
+            p.fStop = stop
+        if steps != 0:
+            p.nSteps = steps
         self.RefreshAllParms()
         self.spectrum = None
         self.ScanPrecheck(True)

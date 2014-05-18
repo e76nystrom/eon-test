@@ -230,7 +230,7 @@ class Marker:
     # Save a marker's mhz and traceName preferences to p.
 
     def SavePrefs(self, p):
-        print ("name=", self.name)
+        #print ("name=", self.name)
         name = re.sub("\+", "p", re.sub("-", "m", self.name))
         for attr in ("mhz", "traceName"):
             setattr(p, "markers_"+name+"_"+attr, getattr(self, attr))

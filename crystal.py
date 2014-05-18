@@ -136,7 +136,11 @@ class CrystAnalDialog(FunctionDialog):
             self.Center()
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.haveAnalyzed = False
-        self.resultsWin = None
+        frame.resultsWin = None
+        self.fStart = p.fStart
+        self.fStop = p.fStop
+        self.nSteps = p.nSteps
+        self.wait = p.wait
         self.Show()
 
     #--------------------------------------------------------------------------
@@ -156,9 +160,30 @@ class CrystAnalDialog(FunctionDialog):
         if msa.IsScanning():
             msa.StopScan()
         else:
+            p = frame.prefs
+            resolution = (p.fStop - p.fStart) / float(p.nSteps)
+            if resolution > 0.000150:
+                targetRes = 0.000012
+            else:
+                targetRes = 0.000005
+            if resolution <= targetRes:
+                return
             self.EnableButtons(False, self.zoomToFsBtn)
             self.rescanBtn.Enable(False)
-            frame.ExpandLR()
+            markers = frame.specP.markers
+            start = markers.get("L").mhz
+            stop = markers.get("R").mhz
+            db3Range = stop - start
+            margin = max(2*resolution, db3Range/20.0)
+            zoomRange = db3Range + 2*margin
+            start = start - margin
+            stop = start + zoomRange
+            steps = int(1 + zoomRange / (2*targetRes)) * 2
+            if steps < 50:
+                steps = 50
+            elif steps > 500:
+                steps = 500
+            frame.ExpandLR(start=start, stop=stop, steps=steps)
             frame.WaitForStop()
             self.EnableButtons(True, self.zoomToFsBtn, "Zoom to Fs")
             self.fullScanRB.SetValue(False)
@@ -250,6 +275,11 @@ class CrystAnalDialog(FunctionDialog):
         else:
             self.EnableButtons(False, self.rescanBtn)
             self.zoomToFsBtn.Enable(False)
+            p = frame.prefs
+            p.fStart = self.fStart
+            p.fStop = self.fStop
+            p.nSteps = self.nSteps
+            p.wait = self.wait
             frame.DoExactlyOneScan()
             frame.WaitForStop()
             self.EnableButtons(True, self.rescanBtn, "Rescan")
@@ -258,11 +288,12 @@ class CrystAnalDialog(FunctionDialog):
     # Copy results to "Crystal List" text window, file.
 
     def OnAddToList(self, event):
-        p = self.frame.prefs
-        rw = self.resultsWin
+        frame = self.frame
+        p = frame.prefs
+        rw = frame.resultsWin
         if not rw:
             pos = p.get("crystalResultsWinPos", (600, 50))
-            self.resultsWin = rw = TextWindow(self.frame, "CrystalList", pos)
+            frame.resultsWin = rw = TextWindow(self.frame, "Crystal List", pos)
             rw.Show()
             wx.Yield()
             self.Raise()
@@ -304,10 +335,15 @@ class CrystAnalDialog(FunctionDialog):
     # Save results file upon dialog close.
 
     def OnClose(self, event):
-        rw = self.resultsWin
-        if rw:
-            self.frame.prefs.crystalResultsWinPos = rw.GetPosition().Get()
-            rw.Close()
+        p = self.frame.prefs
+        p.fStart = self.fStart
+        p.fStop = self.fStop
+        p.nSteps = self.nSteps
+        p.wait = self.wait
+#        rw = self.resultsWin
+#        if rw:
+#            self.frame.prefs.crystalResultsWinPos = rw.GetPosition().Get()
+#            rw.Close()
         FunctionDialog.OnClose(self, event)
 
 #------------------------------------------------------------------------------
