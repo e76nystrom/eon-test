@@ -2,7 +2,7 @@ from msaGlobal import logEvents, SetModuleVersion
 from util import msElapsed
 from numpy import mod
 
-SetModuleVersion("events",("1.02","EON","03/11/2014"))
+SetModuleVersion("events",("1.30","EON","05/20/2014"))
 
 debug = False
 

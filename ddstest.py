@@ -3,7 +3,7 @@ import wx
 from msa import MSA
 from util import divSafe
 
-SetModuleVersion("ddsTest",("1.02","EON","03/11/2014"))
+SetModuleVersion("ddsTest",("1.30","EON","05/20/2014"))
 
 #==============================================================================
 # The Special Tests dialog box # JGH Substantial mod on 1/25/14
@@ -79,9 +79,7 @@ class DDSTests(wx.Dialog):   # EON 12/22/13
 
         # VNA Mode selection
 
-        if msa.mode == MSA.MODE_SATG or msa.mode == MSA.MODE_SA:
-            pass
-        else:
+        if msa.mode >= MSA.MODE_VNATran:
             btn = wx.Button(self, 0, "Change PDM")
             btn.Bind(wx.EVT_BUTTON, self.ChangePDM)
             sizerGB.Add(btn,(5,0), flag=c)
@@ -101,15 +99,10 @@ class DDSTests(wx.Dialog):   # EON 12/22/13
     def ChangePDM(self, event):  #TODO
         pass
 
-    # JGH deleted 2/1/14 (No help needed)
-##    def DDSTestsHelp(self, event):
 
     def Close(self, event=None):
         p = self.prefs
         p.DDStestsWinPos = self.GetPosition().Get()
-##        btn = wx.Button(self, -1, "CLOSE", (5, 435), (140,-1))
-##        btn.Bind(wx.EVT_BUTTON, self.CloseSpecial)
-##        sizerGB.Add(btn,(6,1), flag=c)
         self.Destroy()
 
 #--------------------------------------------------------------------------

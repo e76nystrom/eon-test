@@ -37,7 +37,7 @@ version = "2.7.P106 (2/3/14)"
 version = "P108JGH_F (2/24/14)"
 version = "P109GEORGE (2/25/14)"
 version = "1.01 (4/01/14)"
-version = "1.12 (4/06/14)"
+version = "1.13 (5/10/14)"
 # This is the source for the MSAPy application. It's composed of two parts:
 #
 # Hardware Back End
@@ -78,7 +78,7 @@ from vScale import VScale
 from spectrum import Spectrum
 import twoPort   # Added by JGH 3/29/14
 
-SetModuleVersion("msapy",("1.10","JGH.e","03/24/2014"))
+SetModuleVersion("msapy",("1.30","JGH","05/20/2014"))
 SetVersion(version)
 
 msa = None
@@ -104,6 +104,7 @@ print ("PROGRAM STARTED")
 
 class MSASpectrumFrame(wx.Frame):
     def __init__(self, parent, title):
+        
         global msa, fontSize
 
         # read preferences file, if any
@@ -159,9 +160,14 @@ class MSASpectrumFrame(wx.Frame):
         ))
         self.setupMenu = self.CreateMenu("&Setup", (
             ("Hardware Config Manager...", "ManageHWConfig", -1),
+            ("Master Osc Calibration...", "MasterOscCal",-1),
             ("Initial Cal Manager...",  "ManageInitCal", -1),
             ("PDM Calibration...",      "PDMCal", -1),
-            ("DDS Tests. . .",          "ddsTests", -1),
+            ("DDS Utilities -->",       None, 4),
+            ("DDS1 Signal Generator",   "DDS1SigGen", -1),
+            ("DDS3 Signal Generator",   "DDS3SigGen", -1),
+            ("DDS3 Tracking Generator", "DDS3TrackGen", -1),
+            ("DDS1 Sweep Generator",    "DDS1SweepGen", -1),
             ("Cavity Filter Test ...",  "CavFiltTest", -1), # JGH 1/25/14
             ("Control Board Tests...",  "CtlBrdTests",-1),
             ("-",                       None, -1),
@@ -225,7 +231,6 @@ class MSASpectrumFrame(wx.Frame):
         self.SetMenuBar(self.menubar)
         self.closeMenuItem = self.fileMenu.FindItemById(wx.ID_CLOSE)
         
-
         self.logSplitter = ls = wx.SplitterWindow(self, style=wx.SP_LIVE_UPDATE)
         ls.Bind(wx.EVT_SPLITTER_DCLICK, self.OnSplitterDClick)
         self.mainP = mainP = wx.Panel(self.logSplitter, style=wx.BORDER_SUNKEN)
@@ -454,7 +459,7 @@ class MSASpectrumFrame(wx.Frame):
         msa.cftest = False
         self.ScanPrecheck(True)
         if (p.get("dds3Track",False) or p.get("dds1Sweep",False)):
-            self.ddsTests
+            self.ddsUtils   # JGH 5/15/2014
         # Define functions available at the menu to each mode:
         self.funcModeList = [0] * 4
         self.funcModeList[MSA.MODE_SA] = ["filter","step"]
@@ -611,7 +616,7 @@ class MSASpectrumFrame(wx.Frame):
             self.RefreshAllParms()
 
         # tell MSA hardware backend to start a scan (msa.py module)
-        if scan:
+        if scan: # For ScanPrecheck the default is scan = True
             msa.ConfigForScan(self, p, haltAtEnd)
 
         if not GetHardwarePresent() and not msa.syndut:
@@ -743,8 +748,12 @@ class MSASpectrumFrame(wx.Frame):
         if msa.IsScanning():
             self.StopScanAndWait()
         elif not msa.HaveSpectrum() or self.needRestart:
+            if 1 or debug:
+                print("msapy>744< CONTINUE is going to ScanPrecheck!")
             self.ScanPrecheck(False)
         else:
+            if 0 or debug:
+                print("msapy>747< CONTINUE is going to ContinueScan!")
             msa.WrapStep()
             msa.haltAtEnd = False
             msa.ContinueScan()
@@ -1030,11 +1039,26 @@ class MSASpectrumFrame(wx.Frame):
     #--------------------------------------------------------------------------
     # Open the DDS Tests dialog box # Eric Nystrom, new function created 12/15/2013
 
-    def ddsTests(self, event=None): # Eric Nystrom, new function created 12/15/2013
+    def ddsops(self, Util): # Eric Nystrom, new function created 12/15/2013
         self.StopScanAndWait()
-        from ddstest import DDSTests
-        dlg = DDSTests(self)
+        from ddsUtils import ddsUtils
+        dlg = ddsUtils(self, Util)
         dlg.Show()
+
+    def DDS1SigGen(self, event=None):
+        self.ddsops(1)
+
+    def DDS3SigGen(self, event=None):
+        self.ddsops(2)
+
+    def DDS3TrackGen(self, event=None):
+        self.ddsops(3)
+
+    def DDS1SweepGen(self, event=None):
+        self.ddsops(4)
+
+    def MasterOscCal(self, event=None):
+        self.ddsops(5)
 
     #--------------------------------------------------------------------------
     # Open the Control Board Tests dialog box.
@@ -1138,7 +1162,7 @@ class MSASpectrumFrame(wx.Frame):
         p = self.prefs
         specP = self.specP
         if 0 or debug:
-            print ("msapy>1126< RefreshAllParms", specP._isReady, self.refreshing)
+            print ("msapy>692< RefreshAllParms", specP._isReady, self.refreshing)
 
 ##        # checkmark the current marker menu item in the Sweep menu
 ##        items = self.sweepMenu.Markers.GetSubMenu()

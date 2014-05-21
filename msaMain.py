@@ -24,7 +24,7 @@
 
 from msaGlobal import SetModuleVersion
 
-SetModuleVersion("msaRun",("1.30","EON","05/20/2014"))
+SetModuleVersion("msaMain",("1.30","EON","05/20/2014")) # May11, 14 name change
 
 import sys, traceback
 import msapy

@@ -3,8 +3,9 @@ from util import msWait
 import os, string, subprocess, sys, usb
 from msa_cb import MSA_CB
 import array as uarray
+import usb.backend.libusb01 as libusb01
 
-SetModuleVersion("msa_cb_usb",("1.03","EON","03/12/2014"))
+SetModuleVersion("msa_cb_usb",("1.30","EON","05/20/2014"))
 
 debug = False
 
@@ -13,6 +14,15 @@ usbReadCount = 0
 usbSyncCount = 20
 
 RequiredFx2CodeVersion = "0.1"
+
+class Bus(object):
+    r"""Bus object."""
+    def __init__(self):
+        self.dirname = ''
+        self.localtion = 0
+        self.devices = [usb.Device(d) \
+                        for d in usb.core.find(find_all=True,
+                                               backend=libusb01.get_backend())]
 
 class MSA_CB_USB(MSA_CB):
     # constants
@@ -32,9 +42,19 @@ class MSA_CB_USB(MSA_CB):
 
     # Look for the FX2 device on USB and initialize it and self.usbFX2 if found
 
+    def busses(self):
+        r"""Return a tuple with the usb busses."""
+        return (Bus(),)
+
     def FindInterface(self):
         if not self.usbFX2:
-            for bus in usb.busses():
+            try:
+                usbBusses = self.busses()
+            except:
+                print ("usb library not installed")
+                return
+
+            for bus in usbBusses:
                 for dev in bus.devices:
                     if dev.idVendor == self.USB_IDVENDOR_CYPRESS and dev.idProduct == self.USB_IDPRODUCT_FX2:
                         odev = dev.open()

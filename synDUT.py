@@ -9,7 +9,7 @@ from msa import MSA
 from util import db, floatOrEmpty, floatSI, EquivS11FromS21, \
     modDegree, si, SI_ASCII, fF, kHz, GHz, mH, MHz, Ohms, pF, pH
 
-SetModuleVersion("synDUT",("1.05","EON","03/12/2014"))
+SetModuleVersion("synDUT",("1.30","EON","05/20/2014"))
 
 debug = False        # set True to write debugging messages to msapy.log
 

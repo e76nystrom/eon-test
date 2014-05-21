@@ -5,7 +5,7 @@ from msa import MSA
 from functionDialog import FunctionDialog
 from trace import GroupDelayTrace, traceTypesLists
 
-SetModuleVersion("coax",("1.00","EON","03/29/2014"))
+SetModuleVersion("coax",("1.30","EON","05/20/2014"))
 
 class GroupDelayDialog(FunctionDialog):
     def __init__(self, frame):

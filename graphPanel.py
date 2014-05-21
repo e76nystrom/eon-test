@@ -9,7 +9,7 @@ from msa import MSA
 from marker import Marker
 from util import MHz, ns, si, SI_NO,StdScale
 
-SetModuleVersion("graphPanel",("1.06","EON","04/03/2014"))
+SetModuleVersion("graphPanel",("1.30","EON","05/20/2014"))
 
 #==============================================================================
 # A graph of a set of traces.

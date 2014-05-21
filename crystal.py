@@ -8,7 +8,7 @@ from util import floatOrEmpty, gstr, MHz, Ohms, pF, ShouldntOverwrite, si, uH
 
 from marker import Marker
 
-SetModuleVersion("crystal",("1.03","EON","04/01/2014"))
+SetModuleVersion("crystal",("1.30","EON","05/20/2014"))
 
 #==============================================================================
 # The Crystal Analysis dialog box.

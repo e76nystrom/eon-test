@@ -5,7 +5,7 @@ from msa import MSA
 from util import floatOrEmpty
 from ref import Ref
 
-SetModuleVersion("stepAtten",("1.02","EON","03/11/2014"))
+SetModuleVersion("stepAtten",("1.30","EON","05/20/2014"))
 
 #=============================================================================
 # The Step Attenuator dialog box.

@@ -2,7 +2,7 @@ from msaGlobal import appdir, GetMsa, SetModuleVersion
 import os,wx
 from util import gstr, Prefs
 
-SetModuleVersion("testSetups",("1.02","EON","03/11/2014"))
+SetModuleVersion("testSetups",("1.30","EON","05/20/2014"))
 
 #==============================================================================
 # The Test Setups dialog box.

@@ -12,7 +12,7 @@ from util import angle
 from util import db
 from msa import MSA
 
-SetModuleVersion("trace",("1.04","EON","03/16/2014"))
+SetModuleVersion("trace",("1.30","EON","05/20/2014"))
 
 def SetMsa(val):
     global msa

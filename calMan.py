@@ -4,7 +4,7 @@ from numpy import isnan
 from util import gstr, ShouldntOverwrite
 from StringIO import StringIO
 
-SetModuleVersion("calMan",("1.03","EON","03/11/2014"))
+SetModuleVersion("calMan",("1.30","EON","05/20/2014"))
 
 CalVersion = "1.03" # compatible version of calibration files
 

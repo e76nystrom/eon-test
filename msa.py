@@ -26,7 +26,12 @@
 # (Texas and New York, March/ April 2014)
 #
 ###############################################################################
-
+#Scotty, 5-11-14. Split method, def CreateSweepArray(self) into two methods,
+#1. def CreateStepArray(self), which builds the VarsArray and StepArray
+#2. def BuildSweepArray(self), which builds the SweepArray, which now depends on StepArray
+#Scotty, 5-12-14. Split method, def Calculate(self, wantedVCOfreq) into two methods,
+#1. def Calculate(self, wantedVCOfreq)
+#2. def CreateDDS(self, ddsout, ddsclock)
 
 from msaGlobal import GetHardwarePresent, GetMsa, isWin, \
     logEvents, msPerUpdate, SetCb, SetHardwarePresent, \
@@ -39,7 +44,7 @@ from events import Event
 from msaGlobal import UpdateGraphEvent
 from spectrum import Spectrum
 
-SetModuleVersion("msa",("1.19","JGH/WS", "04/06/2014"))
+SetModuleVersion("msa",("1.30","JGH/WS","05/20/2014"))
 
 # for raw magnitudes less than this the phase will not be read-- assumed
 # to be noise
@@ -181,6 +186,8 @@ class MSA:
         self.scanResults = Queue()
         # active Synthetic DUT
         self.syndut = None  # JGH 2/8/14 syndutHook1
+        self.dds1Sweep = False
+        self.dds3Track = False
 
     #--------------------------------------------------------------------------
     # Log one MSA event, given descriptive string. Records current time too.
@@ -225,6 +232,7 @@ class MSA:
     # Return equivalent 1G frequency for f, based on _GHzBand.
 
     def _Equiv1GFreq(self, f):
+        global LO2
         if self._GHzBand == 1:
             return f
         elif  self._GHzBand == 2:
@@ -237,6 +245,7 @@ class MSA:
     # NOT USED ANY MORE: CODE MOVED TO CREATE SWEEP ARRAY
 
     def _CalculateAllStepsForLO1Synth(self, thisfreq, band):
+        global LO1, LO2
         self._GHzBand = band
         thisfreq = self._Equiv1GFreq(thisfreq)  # get equivalent 1G frequency
         # calculate actual LO1 frequency
@@ -244,10 +253,9 @@ class MSA:
 
     #--------------------------------------------------------------------------
     # Calculate all steps for LO3 synthesizer.
-    # CODE TENTATIVELY MOVED TO CREATE SWEEP ARRAY
 
     def _CalculateAllStepsForLO3Synth(self, TrueFreq):
-        
+        global LO2, LO3
         thisfreq = self._Equiv1GFreq(TrueFreq)  # get equivalent 1G frequency
 
         LO2freq = LO2.freq
@@ -292,46 +300,35 @@ class MSA:
     # This format guarantees that the common clock will
     # not transition with a data transition, preventing crosstalk in LPT cable.
 
-
-##    def _CommandAllSlims(self, f):
     def _CommandAllSlims(self): # IS CALLED AT EVERY STEP OF THE SWEEP
-        # NOTE that the ByteList is pre-stored in the step indexed StepArray
         global cb
         p = self.frame.prefs
-        f = self._freqs[0]
-        band = min(max(int(f/1000) + 1, 1), 3) # JGH Initial band
-        
-        if p.mBand == True:
-            step1k = self.step1k ; step2k = self.step2k
-            if p.sweepDir == 0:
-                if ((step1k != None and self._step == (step1k - 1)) or \
-                    (step2k != None and self._step == (step2k - 1))):
-                    band = band + 1
-                    self._SetFreqBand(band)
-                    cb.msWait(100)
-##                self.sendByteList()
-            if p.sweepDir == 1:
-                if (self._step == (step1k) or self._step == (step2k)):
-                    band = band - 1
-                    self._SetFreqBand(band)
-                    cb.msWait(100)
-##                self.sendByteList() # JGH Change this to account for reciprocating
-        self.sendByteList()
-##        else:
-##            self.sendByteList()
-    #--------------------------------------------------------------------------
 
-    def sendByteList(self):
-        global cb
-        p = self.frame.prefs
-        byteList = self.SweepArray[self._step]
-        cb.SendDevBytes(byteList, cb.P1_Clk)    # JGH 2/9/14
+        swP4Bits = self.StepArray[self._step][29]
+        slimBits = self.SweepArray[self._step]
+        if 0 or debug:
+            print("msa>307< step:", self._step, "swP4Bits:", swP4Bits, "slimBits", slimBits)
+       
+        if self._step == 0 or self._step == self._nSteps:
+            # give the first step extra time to settle
+            cb.msWait(200)
 
-        # print ("msa>323< Remove data, leaving bitsRBW data to filter bank"
-        if p.rbwP4 == False:
-            cb.SetP(1, self.bitsRBW)
-        elif p.rbwP4 == True:
-            cb.SetP(1, 0)
+        else: 
+            #Get the previous bit
+            #print("msa>317< _sweepInc:", self._sweepInc)
+            prev_swP4Bits = self.StepArray[self._step - self._sweepInc][29]
+            #print("msa>317<previous & present switch bits:", prev_swP4Bits, swP4Bits)
+            if prev_swP4Bits != swP4Bits :
+                # A change has ocurred: send new swP4Bits and delay
+                if 0 or debug:
+                    print("msa>321< A switch change has ocurred!")
+                # Remove data, leaving bitsRBW data to filter bank"
+                if p.rbwP4 == False:
+                    cb.SetP(1, self.bitsRBW)
+                cb.SetP(4, swP4Bits)
+                cb.msWait(200)
+
+        cb.SendDevBytes(slimBits, cb.P1_Clk)    # JGH 2/9/14
 
         # send LEs to PLL1, PLL3, FQUDs to DDS1, DDS3, and command PDM
         # begin by setting up init word=LEs and Fquds + PDM state for thisstep
@@ -360,60 +357,85 @@ class MSA:
 
     #--------------------------------------------------------------------------
     # Set the GHz frequency band: 1, 2, or 3.
+    # CURRENTLY THIS METHOD IS CALLED FROM THE seepDialog module.
+    # No longer needed. Keep it here to posibly reuse code.
 
-    def _SetFreqBand(self, band, extraBits=0):
-        global cb
-        switchBits = self.getSwitchBits()
-
-        self._GHzBand = band
-        band += extraBits
-        if self._GHzBand == 2:
-            self.bitsBand = 64 * 0
-        else:
-            self.bitsBand = 64 * 1
-        if self.rbwP4 == True:
-            # Clear the frequency band bits (bit 6 of P4)
-            bitPos = 6 ; switchBits &= ~(1 << bitPos)
-            switchBits = switchBits + self.bitsBand
-        else:
-            # Clear the frequency band bits (bits 2 and 3 of P4)
-            bitPos = 2 ; switchBits &= ~(1 << bitPos)
-            bitPos = 3 ; switchBits &= ~(1 << bitPos)
-            
-            switchBits = switchBits + self.bitsBand
-        cb.SetP(4, switchBits)
-        cb.setIdle()
-        if debug:
-            print ("G%02x" % band )
+##    def _SetFreqBand(self, band, extraBits=0):
+##        global cb
+##        swP4Bits = self.getSw4Bits()
+##
+##        self._GHzBand = band
+##        band += extraBits
+##        if self._GHzBand == 2:
+##            self.bitsBand = 64 * 0
+##        else:
+##            self.bitsBand = 64 * 1
+##        if self.rbwP4 == True:
+##            # Clear the frequency band bits (bit 6 of P4)
+##            bitPos = 6 ; swP4Bits &= ~(1 << bitPos)
+##            swP4Bits = swP4Bits + self.bitsBand
+##        else:
+##            # Clear the frequency band bits (bits 2 and 3 of P4)
+##            bitPos = 2 ; swP4Bits &= ~(1 << bitPos)
+##            bitPos = 3 ; swP4Bits &= ~(1 << bitPos)
+##            
+##            swP4Bits = swP4Bits + self.bitsBand
+##        return swP4Bits
+##       
+####        cb.setIdle()
+##        if debug:
+##            print ("G%02x" % band )
 
     #--------------------------------------------------------------------------
     # Get the switch bits
 
-    def getSwitchBits(self):
+    def getSw4Bits(self, band, extrabits=0):
+
+        # The extrabits were used for the step attenuator. NOT USED ANYMORE
+
         p = self.frame.prefs
         self.vFilterSelindex = p.get("vFilterSelindex", 1)   # Values 0-3
         self.switchRBW = p.get("RBWSelindex", 0) # Values 0-3
         self.switchFR = p.get("switchFR", False) # Values 0,1
         self.switchTR = p.get("switchTR", 0) # Values 0,1
-        self.switchBand = p.get("switchBand", 1) # 1: 0-1GHz, 2: 1-2GHz, 3: 2-3GHz
         self.switchPulse = 0 # JGH Oct23 Set this here and follow with a 1 sec delay
+##        self.switchBand = p.get("switchBand", 1) # 1: 0-1GHz, 2: 1-2GHz, 3: 2-3GHz
 
         self.bitsVideo = self.vFilterSelindex # V0/V1 Bits 0,1
         self.bitsFR = 16 * self.switchFR # Bit 4
         self.bitsTR = 32 * self.switchTR    # Bit 5
         self.bitsPulse = 128 * self.switchPulse # Bit 7
+
+##        band += extrabits # JGH. What are these for?
+       
         if self.rbwP4 == True:
-            self.bitsBand = 64 * self. switchBand # G0 Bit 6 of P4
+            if band == 2:
+                self.bitsBand = 64 # High bit for band 2
+            else:
+                self.bitsBand = 0  # G0 Bit 6 of P4
+                
             self.bitsRBW = 4 * self.switchRBW # A0/A1 Bits 2, 3 of P4
-            switchBits = self.bitsVideo + self.bitsRBW + self.bitsFR + \
+            
+            swP4Bits = self.bitsVideo + self.bitsRBW + self.bitsFR + \
                     self.bitsTR + self.bitsBand + self.bitsPulse
-        elif self.rbwP4 == False:
-            self.bitsBand = 4 * self. switchBand # G0 Bits 2, 3 of P4
-            switchBits = self.bitsVideo + self.bitsFR + \
+            
+        else:
+            # self.rbwP4 == False: # G0, G1 Bits 2, 3 of P4
+            self.bitsBand = 4 *(band -1)
+##            if band == 1:
+##                self.bitsBand = 0
+##            elif band ==2:
+##                self.bitsBand = 4
+##            elif band ==3:
+##                self.bitsBand = 8
+
+            # Note: there are no RBW here since they are at P1
+            
+            swP4Bits = self.bitsVideo + self.bitsFR + \
                     self.bitsTR + self.bitsBand + self.bitsPulse
         if 0 or debug:
-            print ("msa>408< switchBits: ", bin(switchBits))
-        return switchBits
+            print ("msa>425< swP4Bits: ", bin(swP4Bits))
+        return swP4Bits
 
     #--------------------------------------------------------------------------
     # Initialize MSA hardware.
@@ -511,9 +533,7 @@ class MSA:
         # begin with all control lines low
         cb.OutControl(cb.contclear)
 
-        self._SetFreqBand(1)
-##        self.lastBand = 1
-        self.lastStepAttenDB = -1 # TODO: ATTENUATOR
+
 
         # 6. Initialize DDS3 by reseting to serial mode.
         # Frequency is commanded to zero
@@ -540,7 +560,7 @@ class MSA:
         # Needs: LO2. (appxVCO, rcounter, masterclock)
         # Here we are just initializing hardware.
         # LO2 is frequency dependent during the cavity filter test, 
-        # so this will be recreated in CreateSweepArray for cftest
+        # so this will be recreated in CreateStepArray for cftest
         # No longer use LO2.CreateIntegerNcounter(appxVCO, self.masterclock)
         ncount = divSafe(self.appxLO2, divSafe(self.masterclock, LO2.rcounter))
         LO2.ncounter = int(round(ncount))
@@ -576,10 +596,16 @@ class MSA:
         # condition. reset serial DDS1 without disturbing Filter Bank or PDM
         LO1.ResetDDSserSLIM()   # SCOTTY TO MODIFY THIS TO LIMIT HIGH CURRENT
 
-        # JGH added 10a. Set Port 4 switches 2/24/14
-        switchBits = self.getSwitchBits()
-        cb.SetP(4, switchBits)
+        # 10a. JGH added set port 4 switches 2/24/14
+        
+        swP4Bits = self.getSw4Bits(self._iBand)
+
+        cb.SetP(4, swP4Bits)
+        cb.setIdle()
         # Commanding P1 for RBW switching is done somewhere else
+
+        # 10b.
+        self.lastStepAttenDB = -1 # TODO: ATTENUATOR
 
         # JGH addition ended
         print("*********************************************************")
@@ -636,17 +662,10 @@ class MSA:
             if hardwarePresent:
                 if 0:
                     self.LogEvent("CaptureOneStep hardware, f=%g" % f)
-                # set MSA to read frequency f
-##                self._CommandAllSlims(f) # SweepArray doesn't need f
                 self._CommandAllSlims()
 
                 if 0:
                     self.LogEvent("CaptureOneStep delay")
-                if step == 0:
-                    # give the first step extra time to settle
-                    cb.msWait(200)
-##                    self._CommandAllSlims(f)
-                    self._CommandAllSlims() # SweepArray doesn't need f
                 cb.msWait(self.wait)
                 # read raw magnitude and phase
                 if 0:
@@ -779,10 +798,10 @@ class MSA:
                         Sdb  -= dSdb
                         Sdeg -= dSdeg
                         if show:
-                            print ("msa>775< jumped gap=", f, H1f, f // 1000, \
+                            print ("msa>788< jumped gap=", f, H1f, f // 1000, \
                                 H1f // 1000, dSdb)
                     if show:
-                        print ("msa>778< hist=", ["%7.2f %7.2f %7.2f" % x for x in hist], \
+                        print ("msa>791< hist=", ["%7.2f %7.2f %7.2f" % x for x in hist], \
                             "Sdb=%7.2f" % Sdb, "Sdeg=%7.2f" % Sdeg, \
                             "Hq=%d" % self._Hquad, "Sq=%1d" % Squad, \
                             "bases=%7.2f" % self._baseSdb, \
@@ -841,18 +860,18 @@ class MSA:
             while self.scanEnabled:
                 self.LogEvent("_ScanThread wloop, step %d" % self._step)
                 self.CaptureOneStep()
-                self.NextStep()
+                self.NextStep() #Scotty, this is where step incremented +1 or -1
                 elapsed += int(self.wait) + 3
                 self.LogEvent("_ScanThread: step=%d Req.nSteps=%d" % \
                               (self._step, self._nSteps))
-                if self._step == 0 or self._step == self._nSteps+1:
-                    if self.haltAtEnd:
-                        self.LogEvent("_ScanThread loop done")
-                        self.scanEnabled = False
-                        break
-                    else:
-                        self.LogEvent("_ScanThread to step 0")
-                        self.WrapStep()
+                #if self._step == 0 or self._step == self._nSteps+1:
+                #    if self.haltAtEnd:
+                #       self.LogEvent("_ScanThread loop done")
+                #        self.scanEnabled = False
+                #        break
+                #    else:
+                #        self.LogEvent("_ScanThread to step 0")
+                #        self.WrapStep()
                 # yield some time to display thread
                 if elapsed > msPerUpdate:
                     elapsed = 0
@@ -878,6 +897,7 @@ class MSA:
         self.LogEvent("NewScanSettings nSteps=%d" % parms.nSteps)
 
         # if scan already running, disable it and wait for it to finish
+        # JGH: This code should be moved up to ConfigForScan, not needed checking again here
         if self._scanning:
             self.scanEnabled = False
             while self._scanning:
@@ -889,7 +909,7 @@ class MSA:
         self._offset     = parms.tgOffset
         self.invDeg      = parms.invDeg
         self._planeExt   = parms.planeExt
-        self._normrev    = parms.normRev # 0 for nrmal TG, 1 for TG in reverse
+        self._normrev    = parms.normRev # 0 for normal TG, 1 for TG in reverse
         self._sweepDir   = parms.sweepDir
         self._isLogF     = parms.isLogF
         self._contin     = parms.continuous
@@ -897,19 +917,31 @@ class MSA:
         # set start and stop frequencies, swapped if sweeping downward
         fStart = parms.fStart
         fStop  = parms.fStop
+        self._nSteps = nSteps = parms.nSteps
+        
+        if parms.mBand == True:
+            self._iBand = min(max(int(fStart/1000) + 1, 1), 3) # JGH Initial band.
+        else:
+            self._iBand = 1
 
-        #The following conditonal may not be needed here
+        # In the sweep parameters window the fStart is always the lower value.
+        # May need an error message otherwise
 
-        if self._sweepDir == 1:
+        if self._sweepDir == 1: # Right to left sweep
+            self._step = nSteps
             self._sweepInc = -1
+            self._end = 0
             self._fStart = fStop
             self._fStop  = fStart
-        else:
+        else :                  # Left to right sweep and alternate always start from left
+            self._step = 0
             self._sweepInc = 1
+            self._end = nSteps
             self._fStart = fStart
             self._fStop  = fStop
 
-        self._nSteps = nSteps = parms.nSteps
+        if 1 or debug:
+            print("msa>945< (at NewScanSettings) self._nSteps:", self._nSteps)
 
         # create array of frequencies in scan range, linear or log scale
         if self._isLogF:
@@ -917,24 +949,10 @@ class MSA:
             self._freqs = logspace(log10(fStart), log10(fStop), num=nSteps+1)
         else:
             self._freqs = linspace(fStart, fStop, nSteps+1) # (numpy)
-            # Note: if sweep changes direction at the end of the sweep,
-            # the array should be read backwards.
-            # This happens at the end of the sweep, NOT HERE
-            # A flag is set in the sweep dialog
-
-        self.step1k = self.step2k = None
-
-        if parms.mBand == True:
-        # Note: step1k and step2k are used to signal the switchBand relay
-            for x, y in enumerate(self._freqs):
-                if y == 1000:
-                    self.step1k = x
-                if y == 2000:
-                    self.step2k = x
-            if 0 or debug:
-                print("msa>928< 1000 is at step #", self.step1k)
-                print("msa>929< 2000 is at step #", self.step2k)
-
+            if 1 or debug:
+                print("msa>954< Number of items in _freqs, last item:",
+                      len(self._freqs), self._freqs[len(self._freqs)-1])
+        # JGH GOLDEN RULE: The INDEX of the last freq is nSteps and there are nSteps+1 freqs.
     #--------------------------------------------------------------------------
     # Start an asynchronous scan of a spectrum. The results may be read at
     # any time. Returns True if scan wasn't already running.
@@ -946,11 +964,18 @@ class MSA:
         self.gui = gui
         self.haltAtEnd = haltAtEnd
         self.NewScanSettings(parms)
+        if 1 or debug:
+            print("msa>969< (at ConfigForScan) self._nSteps:", self._nSteps)
         self.InitializeHardware()
-        self._step = 0
         self._history = []
         self._baseSdb = 0
         self._baseSdeg = 0
+        if hardwarePresent or self.syndut != None:
+            if not self._scanning:
+                # Array creation moved here, before Continue Scan # JGH 5/15/14
+                self.CreateStepArray() # Creates StepArray
+                # Now that StepArray is completely built, go and build the SweepArray[]
+                self.BuildSweepArray() # Builds SweepArray
         self.ContinueScan()
         self.LogEvent("Scan exit")
         return True
@@ -960,16 +985,13 @@ class MSA:
 
     def ContinueScan(self):
         self.LogEvent("ContinueScan: step=%d" % self._step)
-        if hardwarePresent or self.syndut != None:
-            if not self._scanning:
-                self.CreateSweepArray() # Creates SweepArray
-                self.LogEvent("ContinueScan start_new_thread")
-                self.scanEnabled = self._scanning = True
-                thread.start_new_thread(self._ScanThread, ())
-            self.LogEvent("ContinueScan exit")
+        self.LogEvent("ContinueScan start_new_thread")
+        self.scanEnabled = self._scanning = True
+        thread.start_new_thread(self._ScanThread, ())
+        self.LogEvent("ContinueScan exit")
 
     #--------------------------------------------------------------------------
-    # SweepArray and StepArray # JGH all new code 3/15/14
+    # StepArray and VarsArray # JGH all new code 3/15/14
     # (send data and clocks without changing Filter Bank)
     #  0-15 is DDS1bit*4 + DDS3bit*16, data = 0 to PLL 1 and PLL 3.
     # (see CreateCmdAllArray). new Data with no clock,latch high,latch low,
@@ -978,16 +1000,21 @@ class MSA:
     # This format guarantees that the common clock will
     # not transition with a data transition, preventing crosstalk in LPT cable.
 
-    def CreateSweepArray(self):
+    def CreateStepArray(self):
         global cb, LO1, LO2, LO3
         p = self.frame.prefs
-        SweepArray = [] # aka GEORGE
+
         VarsArray = []  # VarsArray size = VariableList size
         StepArray = []  # StepArray size = Number of steps # aka BIG BERTHA
 
-        for f in self._freqs:
-            _GHzBand = min(max(int(f/1000) + 1, 1), 3) # JGH Values 1,2,3
+        for f in self._freqs: # there are _nsteps+1 f's indexed 0 to _nsteps
+            if p.mBand == True:
+                _GHzBand = min(max(int(f/1000) + 1, 1), 3) # JGH Values 1,2,3
+            else:
+                _GHzBand = 1
             self._GHzBand = _GHzBand
+            swP4Bits = self.getSw4Bits(_GHzBand)
+            self.swP4Bits = swP4Bits
             thisfreq = self._Equiv1GFreq(f)  # get equivalent 1G frequency
             # With this we got all LO1.freq (thisfreq)
             # Calculate all Steps for LO2 and LO1.
@@ -1003,13 +1030,13 @@ class MSA:
                 LO2.ncounter = int(round(ncount))
                 LO2.fcounter = 0  #fcounter is not used anymore                    
                 if 0 or debug:
-                    print("msa>999< LO2 testfreq, ncounter, fcounter: ", \
+                    print("msa>1053< LO2 testfreq, ncounter, fcounter: ", \
                           cftestLO2freq, LO2.ncounter, LO2.fcounter)
                 LO2.CreatePLLN()
                 LO2.freq = ((LO2.Bcounter*LO2.preselector) + LO2.Acounter+ \
                             (LO2.fcounter/16))*LO2.pdf
                 if 0 or debug:
-                    print("msa>1005< LO2.PLLtype, LO2 freq, rcounter, pdf, ncounter, fcounter, \
+                    print("msa>1046< LO2.PLLtype, LO2 freq, rcounter, pdf, ncounter, fcounter, \
                           Acounter, Bcounter, PLLbits: ",\
                           LO2.PLLtype, LO2.freq, LO2.rcounter, LO2.pdf, LO2.ncounter, LO2.fcounter,
                           LO2.Acounter, LO2.Bcounter, LO2.PLLbits)
@@ -1018,38 +1045,98 @@ class MSA:
                 LO1.Calculate(LO2.freq - self.finalfreq) #creates LO1 for cftest operation
         #--------------------------------------------------------------------------
             else:
-                LO1.Calculate(thisfreq + LO2.freq - self.finalfreq) #creates LO1 for normal operation
+                if not self.dds1Sweep:
+                    LO1.Calculate(thisfreq + LO2.freq - self.finalfreq) #creates LO1 for normal operation
+                else:
+                    LO1.CreateDDS(f, msa.masterclock)
+
+                # returns with: LO1.ncounter, LO1.PLLbits, LO1.Acounter, LO1.Bcounter,
+                #  LO1.DDSbits, LO1.ddsoutput, LO1.pdf, LO1.freq
             if 0 or debug:
-                print("msa>1016< f, LO2.freq, thisfreq, LO1.freq: ", f, LO2.freq, thisfreq, LO1.freq)
+                print("msa>1059< f, LO2.freq, thisfreq, LO1.freq: ", f, LO2.freq, thisfreq, LO1.freq)
 
-                
-            LO2freq = LO2.freq
+            if not self.dds3Track:
+                # Calculate All Steps For LO3 Synthesizer
+                self._CalculateAllStepsForLO3Synth(f)
+                # returns with: LO3.ncounter, LO3.PLLbits, LO3.Acounter, LO3.Bcounter,
+                #  LO3.DDSbits, LO3.ddsoutput, LO3.pdf, LO3.freq
+            else:
+                LO3.CreateDDS(f, msa.masterclock)
 
-            # Calculate All Steps For LO3 Synthesizer
-            # Gets ncounter, fcounter, pdf and ddsoutput
-            self._CalculateAllStepsForLO3Synth(f)
+            RealFinalIF = LO2.freq -(LO1.freq - thisfreq)
 
-            # HERE IS WHERE WE HAVE TO ADD THE LO2 PARAMS
-            # No need to worry for DATAPLL2 since is common to DDS3
-            # PLLs go out MSB first, with a 16-bit leader of zeros
-            PLL1bits = LO1.PLLbits
-            PLL2bits = LO2.PLLbits
-            PLL3bits = LO3.PLLbits
-            msb = 23 + 16
-            shift1 = msb - cb.P1_PLL1DataBit
-            shift2 = msb - cb.P1_PLL2DataBit 
-            shift3 = msb - cb.P1_PLL3DataBit
-            mask = 1 << msb
-            # pre-shift 40 bits for each DDS so the LSB aligns with its port
-            # serial-data bit
-            DDS1bits = LO1.DDSbits << cb.P1_DDS1DataBit
-            DDS3bits = LO3.DDSbits << cb.P1_DDS3DataBit
-            if 0 or debug:
-                print ("PLL1bits=0x%010x" % PLL1bits)
-                print ("DDS1bits=0x%010x" % DDS1bits)
-                print ("DDS3bits=0x%010x" % DDS3bits)
+            #This is where we build the StepArray (containing all parameters for ONE step)
+            #in tandem with calculating all the steps.
+            #StepArray is used to Show Variables and for building the SweepArray
+            #When completed, we will then build the SweepArray using the info in the StepArray.
+            #The StepArray has the same number of slots as the number of steps in the sweep
+            #Each slot is a VarsArray containg hard variables for each step in the sweep
+            #we add a VarsArray to the StepArray each time we calculate the parameters for each step.            
+            #LO1.fcounter(7) is not used, been set to 0. Now, LO1.PLLbits
+            #LO2.fcounter(15) is not used, been set to 0. May use for something else.
+            #LO3.fcounter(23) is not used, been set to 0. Now, LO3.PLLbits
+            VarsArray = [f, \
+                         LO1.ddsoutput, LO1.freq, LO1.pdf, LO1.ncounter, LO1.Bcounter, \
+                         LO1.Acounter,  LO1.PLLbits, LO1.rcounter, \
+                         LO2.PLLbits, LO2.freq, LO2.pdf, LO2.ncounter, LO2.Bcounter, \
+                         LO2.Acounter,  LO2.fcounter, LO2.rcounter, \
+                         LO3.ddsoutput, LO3.freq, LO3.pdf, LO3.ncounter, LO3.Bcounter, \
+                         LO3.Acounter,  LO3.PLLbits, LO3.rcounter, \
+                         RealFinalIF, self.masterclock, \
+                         LO1.DDSbits, LO3.DDSbits, \
+                         self.swP4Bits] #Scotty added 27 and 28, JGH added 29
+            
+            # The VarsArray  is used to Show Variables
+            # The StepArray (aka BIG BERTHA contains the parameters for ALL steps
+            StepArray.append(VarsArray)
 
-            byteList = []   # JGH 2/9/14
+        if 0 or debug:
+            print("msa>1083< StepArray[0]: ", StepArray[0])
+##            print("msa>1084< _nSteps:", self._nSteps)
+            print("msa>1085< Last Step: ", StepArray[self._nSteps]) # JGH 5/17/14
+         
+        self.StepArray = StepArray
+
+        #We can now access or change any value in the StepArray
+        # To access: value = (MSA. or self.)StepArray[step number][0-28]
+        
+        
+    def BuildSweepArray(self): #Scotty
+        #This is where we build the SweepArray[]
+        #It has the same number of slots as the number of steps in the sweep
+        #Each slot is a slimBits composed of the bits required for commanding
+        #all of the modules at the same time.
+        #Previously, we used hard variables for building. Now we use the same
+        #hard variables, but they come from the StepArray[].
+        # HERE IS WHERE WE HAVE TO ADD THE LO2 PARAMS
+        # No need to worry for DATAPLL2 since is common to DDS3
+        # PLLs go out MSB first, with a 16-bit leader of zeros
+        # pre-shift 40 bits for each DDS so the LSB aligns with its port
+        # serial-data bit
+
+
+        # HERE IS WHERE WE HAVE TO ADD THE LO2 PARAMS
+        # No need to worry for DATAPLL2 since is common to DDS3
+        # PLLs go out MSB first, with a 16-bit leader of zeros
+##            PLL1bits = LO1.PLLbits
+##            PLL2bits = LO2.PLLbits
+##            PLL3bits = LO3.PLLbits
+        msb = 23 + 16
+        shift1 = msb - cb.P1_PLL1DataBit
+        shift2 = msb - cb.P1_PLL2DataBit 
+        shift3 = msb - cb.P1_PLL3DataBit
+        mask = 1 << msb
+
+        SweepArray = [] # aka GEORGE
+
+        for j in range(self._nSteps + 1): # JGH: j spans from 0 to _nSteps for a total of _nSteps+1 items
+            PLL1bits = self.StepArray[j][7] #Scotty was LO1.PLLbits
+            PLL2bits = self.StepArray[j][9] #Scotty was LO2.PLLbits
+            PLL3bits = self.StepArray[j][23] #Scotty was LO3.PLLbits
+            DDS1bits = self.StepArray[j][27] << cb.P1_DDS1DataBit #Scotty was LO1.DDSbits
+            DDS3bits = self.StepArray[j][28] << cb.P1_DDS3DataBit #Scotty was LO3.DDSbits
+      
+            slimBits = []   # JGH 2/9/14
             for i in range(40):
                 # combine the current bit for each device and clk them out together
                 a = (DDS3bits & cb.P1_DDS3Data) + ((PLL3bits & mask) >> shift3) + \
@@ -1058,40 +1145,14 @@ class MSA:
                     a += ((PLL2bits & mask) >> shift2)
                 if self.rbwP4 == False:       
                     a += self.bitsRBW 
-                byteList.append(a)  # JGH 2/9/14
+                slimBits.append(a)  # JGH 2/9/14
                 # shift next bit into position NOT USED ANYMORE
                 DDS3bits >>= 1; PLL3bits <<= 1
                 DDS1bits >>= 1; PLL1bits <<= 1
-                
-            SweepArray.append(byteList)
 
-            # Build an VarsArray containg all parameters for ONE step
+            SweepArray.append(slimBits)
 
-            #RealFinalIF = realLO2 -(realLO1-thisfreq)
-            RealFinalIF = LO2.freq -(LO1.freq - thisfreq)
-            LO2.ddsoutput = 0 #scotty, not used. Set to 0. May use for something else.
-            #LO2.fcounter is not used. Has been set to 0. May use for something else.
-            
-            VarsArray = [f, \
-                         LO1.ddsoutput, LO1.freq, LO1.pdf, LO1.ncounter, LO1.Bcounter, \
-                         LO1.Acounter,  LO1.fcounter, LO1.rcounter, \
-                         #LO2.ddsoutput, LO2.freq, LO2.pdf, LO2.ncounter, LO2.Bcounter, \ #scotty, use 15 for cftest
-                         LO2.PLLbits, LO2.freq, LO2.pdf, LO2.ncounter, LO2.Bcounter, \
-                         LO2.Acounter,  LO2.fcounter, LO2.rcounter, \
-                         LO3.ddsoutput, LO3.freq, LO3.pdf, LO3.ncounter, LO3.Bcounter, \
-                         LO3.Acounter,  LO3.fcounter, LO3.rcounter, \
-                         RealFinalIF, self.masterclock]
-
-            # The StepArray (aka BIG BERTHA contains the parameters for ALL steps
-            # It is used to Show Variables
-            StepArray.append(VarsArray)
-
-        if 0 or debug:
-            print("msa>1083< StepArray[0]: ", StepArray[0])
-            print("msa>1084< Last Step: ", StepArray[self._nSteps])
-        #step1k = self.step1k ; step2k =self.step2k
         self.SweepArray = SweepArray
-        self.StepArray = StepArray
 
     #--------------------------------------------------------------------------
     # Stop current scan.
@@ -1113,36 +1174,50 @@ class MSA:
         return self._step
 
     def WrapStep(self):
-        lastStep = self._step
+        # JGH: This method does not make sense.
+        # It is called from msa.py when at either end of the sweep and is also called 
+        # from the OnMeasure method which, in turn, is called by the Measure Button during calibration.
+        # See the Calibration File Manager (class CalManDialog ) in the calMan.py module.
+        # It appears that the purpose is to clear some historic data
+        lastStep = self._step 
         self._step = lastStep % (self._nSteps+1)
         if abs(self._step - lastStep) > 1:
             self._baseSdb = 0
             self._baseSdeg = 0
             self._history = []
 
-    def NextStep(self): # EN 12/23/13 Modified this method as follows
-        if self._sweepDir == 2: # sweep back and forth (alternate sweep)
-            if (self._step == 1 + self._nSteps) and (self._sweepInc == 1): # EN 12/23/13
-                self._sweepInc = -1
-            elif (self._step == 0) and (self._sweepInc == -1):
-                self._sweepInc = 1
-            else:
-                self._step += self._sweepInc
-        elif self._sweepDir == 1: # sweep right to left
-            if self._step == 0:
-                self._step = self._nSteps
-                self._sweepInc = -1
-            else:
-                self._step += self._sweepInc
-        else:
-            self._step += self._sweepInc
+    def NextStep(self):
+        if self._step != self._end:		# if not at end
+            self._step += self._sweepInc	# increment step
+        else:					# if at end
+            if self._sweepDir == 0:		# sweeping left to right
+                self._step = 0			# back to starting left point
+            elif self._sweepDir == 1:		# sweeping right to left
+                self._step = self._nSteps	# start at left point
+            else:				# sweep back and forth (alternate sweep)
+                self._sweepInc = -self._sweepInc
+                if self._sweepInc > 0:
+                    self._end = self._nSteps
+                else:
+                    self._end = 0
+            self._baseSdb = 0
+            self._baseSdeg = 0
+            self._history = []
+            if self.haltAtEnd:
+                self.LogEvent("_ScanThread loop done")
+                self.scanEnabled = False
 
     #--------------------------------------------------------------------------
     # Return a string of variables and their values for the Variables window.
 
     def GetVarsTextList(self):
-
-        step = max(self._step - 1, 0) # JGH has a question about this line
+        
+        # This list should include the variable values after Capturing the step,
+        # but before the step number is incremented.
+        # Therefore we have to make sure that the Magdata and Phadata correspond to the proper step.
+##        step = max(self._step - 1, 0) # JGH has a question about this line
+        step = self._step
+        
         textList = [
             "this step = %d" % step,
             "frequency = %0.7f MHz" % self.StepArray[step][0],#scotty, was .6g
@@ -1152,13 +1227,14 @@ class MSA:
             "ncounter1 = %d" % self.StepArray[step][4],
             "Bcounter1 = %d" % self.StepArray[step][5],
             "Acounter1 = %d" % self.StepArray[step][6],
-            "fcounter1 = %d" % self.StepArray[step][7],
+            "PLL1bits = %d" % self.StepArray[step][7],#scotty,change
             "rcounter1 = %d" % self.StepArray[step][8],
             "LO2 = %0.7f MHz" % self.StepArray[step][10],
             "pdf2 = %0.6f MHz" % self.StepArray[step][11],
             "ncounter2 = %d" % self.StepArray[step][12],
             "Bcounter2 = %d" % self.StepArray[step][13],
             "Acounter2 = %d" % self.StepArray[step][14],
+            "PLL2bits = %d" % self.StepArray[step][15],#scotty, added
             "rcounter2 = %d" % self.StepArray[step][16],
             "dds3output = %0.9g MHz" % self.StepArray[step][17],
             "LO3 = %0.7f MHz" % self.StepArray[step][18],
@@ -1166,13 +1242,14 @@ class MSA:
             "ncounter3 = %d" % self.StepArray[step][20],
             "Bcounter3 = %d" % self.StepArray[step][21],
             "Acounter3 = %d" % self.StepArray[step][22],
-            "fcounter3 = %d" % self.StepArray[step][23],
+            "PLL3bits = %d" % self.StepArray[step][23],#scotty,change
             "rcounter3 = %d" % self.StepArray[step][24],
-            "Magdata=%d mag=%0.5g" % (self._magdata, self._Sdb),
-            "Phadata=%d PDM=%0.5g" % (self._phasedata, self._Sdeg),
+            "Magdata = %d mag = %0.5g" % (self._magdata, self._Sdb),#scotty,add spaces
+            "Phadata = %d PDM = %0.5g" % (self._phasedata, self._Sdeg),#scotty,add spaces
             "Real Final I.F. = %0.9f" % self.StepArray[step][25],#scotty, was %f
-            "Masterclock = %0.6f" % self.StepArray[step][26]
-            ]
+            "Masterclock = %0.6f" % self.StepArray[step][26],
+            "Switches = " + bin(256 + self.StepArray[step][29])[-8:]
+            ]            
         return textList
 
     #--------------------------------------------------------------------------
@@ -1181,7 +1258,7 @@ class MSA:
     def HaveSpectrum(self):
         return self._fStart != None
 
-    def NewSpectrumFromRequest(self, title):
+    def NewSpectrumFromRequest(self, title):  # JGH: called from msapy.py 
         return Spectrum(title, self.RBWSelindex+1, self._fStart, self._fStop,
                         self._nSteps, self._freqs)
 
@@ -1216,9 +1293,10 @@ class MSA_LO:
         self.Bcounter = 0.                  # PLL B counter
         self.fcounter = 0.                  # PLL fractional-mode N counter
         self.preselector = 32               # DEFAULT
+        self.PLLbits = 0
         if 0 or debug:
             print ("msa>1213< LO%d init: PDF=%f" % (id, PLLphasefreq))
-##scotty, kill for now. Sprucheck needs rewriting
+##scotty, kill for now. Spurcheck needs rewriting
 ##        # PLL R counter
 ##        self.CreateRcounter(self.appxdds)
 ##        if GetMsa().spurcheck:
@@ -1475,22 +1553,16 @@ class MSA_LO:
         ncount = divSafe(wantedVCOfreq, divSafe(self.appxdds, self.rcounter))
         ncounter = int(round(ncount))
         self.ncounter = ncounter
+        temppdf = divSafe(wantedVCOfreq, ncounter) # Scotty moved here
         self.fcounter = 0  #fcounter not used anymore
 
         self.CreatePLLN() #creates bits for PLL
 
-        # CreateDDS
-        # The formula for the frequency output of the DDS
-        # (AD9850, 9851, or any 32 bit DDS) is taken from:
-        # ddsoutput = base*msa.masterclock/2^32
-        # rounded off to the nearest whole bit
-        temppdf = divSafe(wantedVCOfreq, ncounter)
+        # CreateDDS by going to def CreateDDS(self, ddsout, ddsclock)
         wantdds = temppdf*self.rcounter
-        base = int(round(divSafe(wantdds * (1<<32), msa.masterclock)))
-        self.DDSbits = base #this is the decimal command to DDS
-        # actual output of DDS (input Ref to PLL)
-        self.ddsoutput = msa.masterclock * base/2**32
-        
+        self.CreateDDS(wantdds, msa.masterclock)
+        # returns with: self.DDSbits and self.ddsoutput
+
         # actual phase freq of PLL
         self.pdf = self.ddsoutput/self.rcounter
         if abs(self.ddsoutput-self.appxdds) > self.ddsfilbw/2:
@@ -1498,4 +1570,11 @@ class MSA_LO:
                                "pdf=%g" % (self.id, self.ddsoutput, self.pdf))
         #actual VCO frequency
         self.freq = self.pdf * ncounter
+
+    def CreateDDS(self, ddsout, ddsclock):
+        
+        self.DDSbits = base = int(round(divSafe(ddsout * (1<<32), ddsclock)))
+        #The actual output frequency of the DDS [DDSout] is:
+        self.ddsoutput = ddsclock * base/2**32 #precise output freq of DDS
+
 #Scotty---------------------------

@@ -3,7 +3,7 @@ from collections import defaultdict
 from gc import collect, get_objects
 #import objgraph   # JGH requires python-objgraph module
 
-SetModuleVersion("memLeak",("1.03","EON","03/11/2014"))
+SetModuleVersion("memLeak",("1.30","EON","05/20/2014"))
 
 objdump = 5
 fill_before = True

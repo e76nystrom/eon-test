@@ -31,7 +31,7 @@ from util import StartStopToCentSpan, CentSpanToStartStop
 from stepAtten import SetStepAttenuator
 from theme import DarkTheme, LightTheme
 
-SetModuleVersion("sweepDialog",("1.05","JGH","04/06/2014"))
+SetModuleVersion("sweepDialog",("1.30","JGH","05/20/2014"))
 
 debug = False
 
@@ -464,7 +464,7 @@ class SweepDialog(wx.Dialog):
         p = self.frame.prefs
         p.wait = int(self.waitTB.GetValue())
 
-     #--------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
 
     def setWaitTCF(self, event=None):
         p = self.frame.prefs
@@ -617,7 +617,7 @@ class SweepDialog(wx.Dialog):
         ##p.atten5 = self.atten5CB.IsChecked()
         p.atten5 = False
         p.stepAttenDB = attenDB = floatOrEmpty(self.stepAttenBox.GetValue())
-        SetStepAttenuator(attenDB)
+        #SetStepAttenuator(attenDB)
         if self.mode == MSA.MODE_SA:
             p.sigGenFreq = floatOrEmpty(self.sigGenFreqBox.GetValue())
         elif self.mode == MSA.MODE_SATG:
@@ -691,6 +691,17 @@ class SweepDialog(wx.Dialog):
         if changed:
             frame.spectrum = None
             specP.results = None
+            fStart = p.fStart
+            fStop = p.fStop
+            remove = []
+            markers = specP.markers
+            for m in markers:
+                marker = markers[m]
+                mhz = marker.mhz
+                if  mhz < fStart or mhz > fStop:
+                    remove.append(m)
+            for m in remove:
+                markers.pop(m, 0)
 
         LogGUIEvent("Apply: new spectrum")
         frame.ReadCalPath()

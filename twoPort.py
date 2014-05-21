@@ -47,7 +47,7 @@ from calMan import CalFileName, CalParseFreqFile, CalParseMagFile
 from vScale import VScale
 from spectrum import Spectrum
 
-SetModuleVersion("msapy",("1.00","JGH","03/29/2014"))
+SetModuleVersion("msapy",("1.30","JGH","05/20/2014"))
 #SetVersion(version)
 
 msa = None
@@ -568,7 +568,7 @@ class TwoPortFrame(wx.Frame):
         LogGUIEvent("DoOneStep")
         self.StopScanAndWait()
         if not self.needRestart:
-            msa.WrapStep()
+            #msa.WrapStep()
             msa.CaptureOneStep()
             msa.NextStep()
 

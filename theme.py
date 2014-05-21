@@ -1,7 +1,7 @@
 from msaGlobal import SetModuleVersion
 import string,wx
 
-SetModuleVersion("theme",("1.02","EON","03/11/2014"))
+SetModuleVersion("theme",("1.30","EON","05/20/2014"))
 
 # Waveform display colors
 

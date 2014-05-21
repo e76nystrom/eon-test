@@ -1,11 +1,11 @@
 from msaGlobal import GetMsa, isWin, SetModuleVersion
-import cmath, inspect, re, os, time, wx
+import cmath, re, os, time, wx
 from wx.lib.dialogs import alertDialog
 from math import cos, floor, sin, sqrt, tan
 from numpy import angle, exp, Inf, isnan, log10, mean, mod
 from numpy import nan_to_num, pi, select, seterr, std
 
-SetModuleVersion("util",("1.03","JGH","03/11/2014"))
+SetModuleVersion("util",("1.30","EON","05/20/2014"))
 
 # Set to truncate S11 to the unity circle to ignore error due to S21
 # measurement losses during calibrating
@@ -15,8 +15,19 @@ constMaxValue = 1e12
 
 # Utilities.
 
-def lineno():
-    return inspect.currentframe().f_back.f_lineno
+### Clear one bit from a byte
+##
+##def clearOneBit(byteVal, bitPos):
+##    # bit <= length of B
+##    B = byteVal ; b = bitPos
+##    n = 0 ; x = 0
+##    while  n <= 7 :
+##        if n == b:
+##            n = n + 1
+##        x += 2**n
+##        n += 1
+##    z = B & x
+##    return z
 
 # Convert to decibels.
 
@@ -74,6 +85,14 @@ def floatOrEmpty(s):
         ##print ("Bad float: '%s'" % s
         return 0.
 
+# Check if a string is a number
+
+def isNumber(s):   # JGH 5/17/14
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
 # Convert an integer or float to a string, retaining precision
 
 def gstr(n):
@@ -89,6 +108,7 @@ if 1:
     mu = u"\u03BC" # JGH mod4P3 -> mu = chr(956)
     Ohms = u"\u2126" #JGH mod4P3 -> Ohms = chr(8486)
     Infin = u"\u221E" # JGH mod4P3 -> Infin = chr(8734)
+    ampersand = u"\u0026"
 else:
     mu = "u"
     Ohms = "Ohms"

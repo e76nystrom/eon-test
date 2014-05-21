@@ -3,7 +3,7 @@ import wx
 from numpy import mod
 from msa import MSA
 
-SetModuleVersion("pdmCal",("1.02","EON","03/11/2014"))
+SetModuleVersion("pdmCal",("1.30","EON","05/20/2014"))
 
 #==============================================================================
 # The PDM Calibration dialog box.
@@ -96,12 +96,12 @@ class PDMCalDialog(wx.Dialog):
         msa.wait = 250
         msa.invDeg = 192.
         msa.invPhase = 0
-        msa.WrapStep()
+        #msa.WrapStep()
         freq, adc, Sdb, phase0 = \
             msa.CaptureOneStep(post=False, useCal=False, bypassPDM=True)
         print ("phase0= %8.3f freq= %8.6f adc=%5d" % (phase0, freq, msa._phasedata))
         msa.invPhase = 1
-        msa.WrapStep()
+        #msa.WrapStep()
         freq, adc, Sdb, phase1 = \
             msa.CaptureOneStep(post=False, useCal=False, bypassPDM=True)
         print ("phase0= %8.3f freq= %8.6f adc=%5d" % (phase1, freq, msa._phasedata))

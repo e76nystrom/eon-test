@@ -11,7 +11,7 @@ def GetModuleInfo():
     global ModuleInfo
     return(ModuleInfo)
 
-SetModuleVersion("msaGlobal",("1.03","EON","03/12/2014"))
+SetModuleVersion("msaGlobal",("1.30","EON","05/20/2014"))
 
 logEvents = False
 

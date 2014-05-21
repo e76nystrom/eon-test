@@ -6,7 +6,7 @@ from numpy import arange, diff, interp
 from util import floatOrEmpty, MHz, si
 from marker import Marker
 
-SetModuleVersion("filter",("1.02","EON","03/11/2014"))
+SetModuleVersion("filter",("1.30","EON","05/20/2014"))
 
 #==============================================================================
 # The Analyze Filter dialog box.

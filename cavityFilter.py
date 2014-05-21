@@ -3,9 +3,9 @@ from msa import LO2
 from util import message
 import wx
 
-SetModuleVersion("cavityFilter",("1.02","JGH_a","03/24/2014"))
+SetModuleVersion("cavityFilter",("1.30","JGH_a","05/20/2014"))
 # Update of
-# SetModuleVersion("cavityFilter",("1.02","EON","03/11/2014"))
+# SetModuleVersion("cavityFilter",("1.30","EON","05/20/2014"))
 
 #==============================================================================
     # CAVITY FILTER TEST # JGH 1/26/14

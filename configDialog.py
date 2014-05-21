@@ -28,9 +28,10 @@ import os, sys
 import wx.grid
 from wx.lib.dialogs import ScrolledMessageDialog
 from util import gstr, mu
+from numKeypad import TextCtrl, NumKeypad
 
-SetModuleVersion("configDialog",("1.04","JGH","04/06/2014"))
-
+SetModuleVersion("configDialog",("1.30","JGH","05/20/2014"))
+# Updated from ("configDialog",("1.02","EON.C","03/16/2014"))
 #==============================================================================
 # The MSA/VNA Configuration Manager dialog box (also modal) # JGH
 
@@ -191,8 +192,10 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
         st = wx.StaticText(self, -1, "Mast Clk (MHz)")
         sizerG1.Add(st, (11, 2), (1, 1), chbt, 10)
         s = p.get("masterclock", 64)
-        mastClkBox = wx.TextCtrl(self, -1, gstr(s), size=tsz)
+##        mastClkBox = wx.TextCtrl(self, -1, gstr(s), size=tsz)
+        mastClkBox = TextCtrl(self, -1, gstr(s), size=tsz)
         mastClkBox.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
+##        mastClkBox.Bind(wx.EVT_RIGHT_DOWN, self.OnRightClick)
         mastClkBox.Enable(True)
         self.mastClkBox = mastClkBox
         sizerG1.Add(mastClkBox, (12, 2), flag=c)
@@ -509,6 +512,23 @@ class ConfigDialog(wx.Dialog): # JGH Heavily modified 1/20/14
             tc.SelectAll()
         event.Skip()
 
+    #--------------------------------------------------------------------------
+    # Call the calculator.py to allow on-screen keyboard.
+
+##    def OnRightClick(self, event):
+##        osk = NumKeypad(self)
+##        NumKeypad.Show(osk)
+####        result = Calculator.Calculate(self.osk)
+##        print("configDialog>521< value:", value)
+####        if osk.ShowModal() == wx.ID_OK:
+##        self.TransferToTextCtrl()
+####        osk.Close()
+####        self.SavePrefs()
+####        p = self.prefs
+##
+##    def TransferToTextCtrl(self):
+##        print("configDialog>526< Transfer in course")
+        
     #--------------------------------------------------------------------------
     # Handle Final Filter ListCtrl item addition/deletion.
     # JGH This section deleted on its entirety 1/21/14

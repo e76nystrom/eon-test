@@ -4,7 +4,7 @@ from numpy import array, isnan, select, zeros
 from events import LogGUIEvent
 from util import MHz, siScale
 
-SetModuleVersion("spectrum",("1.02","EON","03/11/2014"))
+SetModuleVersion("spectrum",("1.30","EON","05/20/2014"))
 
 #==============================================================================
 # Holder of the parameters and results of one scan.

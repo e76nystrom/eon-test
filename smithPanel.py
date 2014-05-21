@@ -5,7 +5,7 @@ from numpy import arange, angle, interp, log10, nan_to_num, pi, sqrt, tan
 from util import si
 from events import LogGUIEvent
 
-SetModuleVersion("smithPanel",("1.03","EON","03/13/2014"))
+SetModuleVersion("smithPanel",("1.30","EON","05/20/2014"))
 
 debug = False
 

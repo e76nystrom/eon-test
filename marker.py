@@ -3,7 +3,7 @@ import re, warnings
 from numpy import arange, interp, isnan, log10, \
     poly1d, polyfit, RankWarning
 
-SetModuleVersion("marker",("1.02","EON","03/11/2014"))
+SetModuleVersion("marker",("1.30","EON","05/20/2014"))
 
 prt = False
 
@@ -195,7 +195,7 @@ class Marker:
         else:
             # normal span: interpolate between trace values
             value = interp(mhz, Fmhz, trace.v)
-        if isnan(value):
+        if value == None or isnan(value):
             value = 0
         return value
 
