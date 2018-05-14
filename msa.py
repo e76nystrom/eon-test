@@ -8,7 +8,7 @@
 # of the original Liberty Basic code developed by Scotty Sprowls (the designer
 # of the Spectrum Analyzer) and Sam Weterlin. Over a period of nine months,
 # comencing in May/June, 2013, Scott's code has been expanded and debugged by
-# Jim Hontoria, W1JGH and Eric Nystrom, W1EON in close consultation with Scotty.
+# Jim Hontoria, W1JGH and Eric Nystrom, W4EON in close consultation with Scotty.
 # Other contributors to the testing have been Will Dillon and  Earle Craig.
 #
 # Copyright (c) 2011, 2013 Scott Forbes
